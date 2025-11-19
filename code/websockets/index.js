@@ -1,22 +1,8 @@
-const httpServer = require("http").createServer();
-const io = require("socket.io")(httpServer, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
-});
+import { serverStart } from "./server.js";
 
-const PORT = process.env.APP_PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
-httpServer.listen(PORT, () => {
-  console.log(`listening on localhost:${PORT}`);
-});
+serverStart(PORT);
 
-io.on("connection", (socket) => {
-  console.log(`client ${socket.id} has connected`);
-
-  socket.on("echo", (message) => {
-    socket.emit("echo", message);
-  });
-});
+console.log(`Socket.io server running on port ${PORT}`);
+console.log("Waiting for connections...");
