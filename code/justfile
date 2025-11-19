@@ -15,19 +15,18 @@ kubectl-update:
 
 
 laravel-build group=GROUP version=VERSION:
-    docker build -t registry.172.22.21.107.sslip.io/{{group}}/api:v{{version}} \
-    -f ./deployment/DockerfileLaravel ./laravel \
+    docker build -t registry.172.22.21.107.sslip.io/{{group}}/api:v{{version}} --platform linux/amd64 \
+    -f ./deployment/DockerfileLaravel ./api \
     --build-arg GROUP={{group}}
 laravel-push group=GROUP version=VERSION:
     docker push registry.172.22.21.107.sslip.io/{{group}}/api:v{{version}}
 
 vue-build group=GROUP version=VERSION:
-    docker build -t registry.172.22.21.107.sslip.io/{{group}}/web:v{{version}} -f ./deployment/DockerfileVue ./vue
+    docker build -t registry.172.22.21.107.sslip.io/{{group}}/web:v{{version}} --platform linux/amd64 -f ./deployment/DockerfileVue ./frontend
 vue-push group=GROUP version=VERSION:
     docker push registry.172.22.21.107.sslip.io/{{group}}/web:v{{version}}
 
 ws-build group=GROUP version=VERSION:
-    docker build -t registry.172.22.21.107.sslip.io/{{group}}/ws:v{{version}} -f ./deployment/DockerfileWS ./websockets
-
+    docker build -t registry.172.22.21.107.sslip.io/{{group}}/ws:v{{version}} --platform linux/amd64 -f ./deployment/DockerfileWS ./websockets
 ws-push group=GROUP version=VERSION:
     docker push registry.172.22.21.107.sslip.io/{{group}}/ws:v{{version}}

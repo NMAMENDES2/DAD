@@ -49,9 +49,9 @@ The images used on a Dockerfile must be accessible in some way. In the case of t
 
 Docker Compose is a way for defining a set of containers that work together and their configurations. This allows us to set up several containers for more complex environments. The simples example, and the won we will be using, is to have an application server (PHP in our case) and a database server (MySQL in our case).
 
-This is the docker-compose.yaml file present in a Laravel instance using Sail.
+This is the compose.yaml file present in a Laravel instance using Sail.
 
-<<< ../code/laravel/docker-compose.yml
+<<< ../code/api/compose.yaml
 
 As we can see it describes two services, a Laravel application server and a MySQL server.
 

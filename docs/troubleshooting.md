@@ -26,6 +26,8 @@ export KUBECONFIG=<full path to the config file>
 
 ### kubectl timeout
 
+Relevant for students working on Windows but inside WLS.
+
 ![kubectl timeout](./assets/dad-issue-1.png)
 
 This issue is one of the ones that we don't have a proper solution for it. We do have a workaround.

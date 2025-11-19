@@ -17,9 +17,9 @@ export default defineConfig({
       {
         text: "Tutorials",
         items: [
+          { text: "Tools", link: "/tools" },
           { text: "Deploy", link: "/deploy" },
           { text: "Troubleshooting", link: "/troubleshooting" },
-          { text: "Changes", link: "/changes" },
           {
             text: "Tools",
             items: [
@@ -87,6 +87,10 @@ export default defineConfig({
                 text: "Justfile",
                 link: "https://github.com/casey/just",
               },
+              {
+                text: "Caddy Server",
+                link: "https://caddyserver.com/"
+              }
             ],
           },
           {
@@ -94,7 +98,7 @@ export default defineConfig({
             items: [
               {
                 text: "Laravel Documentation",
-                link: "https://laravel.com/docs/11.x",
+                link: "https://laravel.com/docs/",
               },
               {
                 text: "VueJS Documentation",

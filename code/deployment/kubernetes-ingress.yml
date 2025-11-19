@@ -26,7 +26,7 @@ spec:
                 name: laravel-app
                 port:
                   number: 80
-    - host: ws-dad-group-x-172.22.21.101.sslip.io # Separate subdomain for WebSocket
+    - host: ws-dad-group-x-172.22.21.101.sslip.io
       http:
         paths:
           - path: /
