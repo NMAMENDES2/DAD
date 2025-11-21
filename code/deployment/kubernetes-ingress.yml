@@ -6,7 +6,7 @@ metadata:
   namespace: dad-group-x
 spec:
   rules:
-    - host: web-dad-group-x-172.22.21.101.sslip.io
+    - host: web-dad-group-x-172.22.21.253.sslip.io
       http:
         paths:
           - path: /
@@ -16,7 +16,7 @@ spec:
                 name: vue-app
                 port:
                   number: 80
-    - host: api-dad-group-x-172.22.21.101.sslip.io
+    - host: api-dad-group-x-172.22.21.253.sslip.io
       http:
         paths:
           - path: /
@@ -26,7 +26,7 @@ spec:
                 name: laravel-app
                 port:
                   number: 80
-    - host: ws-dad-group-x-172.22.21.101.sslip.io
+    - host: ws-dad-group-x-172.22.21.253.sslip.io
       http:
         paths:
           - path: /
