@@ -67,7 +67,7 @@ VITE_WS_CONNECTION=ws://ws-dad-group-X.172.22.21.253.sslip.io
 
 ## Deploy the code
 
-To deploy our code to the cluster we need to build or container images locally, and push them to the container registry, that in our case lives at `registry.172.22.21.115.sslip.io`.
+To deploy our code to the cluster we need to build or container images locally, and push them to the container registry, that in our case lives at `registry-172.22.21.115.sslip.io`.
 
 Present in the repository under the [code](https://github.com/ricardogomes/DAD-Tutorials/tree/main/code) folder is one called `deployment`. We are going to need those files.
 
@@ -84,7 +84,7 @@ This is the configuration we need (this is a JSON property to be included into e
 
 ```json
 
-    "insecure-registries" : [ "registry.172.22.21.115.sslip.io" ]
+    "insecure-registries" : [ "registry-172.22.21.115.sslip.io" ]
 
 ```
 
@@ -99,7 +99,7 @@ On linux we can edit the file directly via `sudo nano /etc/docker/daemon.json` a
 Build the Laravel Image (replace group with your group id - dad-group-X and the version with the current version - 1.0.0):
 
 ```bash
-docker build -t registry.172.22.21.115.sslip.io/{{group}}/api:v{{version}} --platform linux/amd64 \
+docker build -t registry-172.22.21.115.sslip.io/{{group}}/api:v{{version}} --platform linux/amd64 \
     -f ./deployment/DockerfileLaravel ./laravel \
     --build-arg GROUP={{group}}
 ```
@@ -107,31 +107,31 @@ docker build -t registry.172.22.21.115.sslip.io/{{group}}/api:v{{version}} --pla
 Push the Laravel Image (replace group with your group id - dad-group-X and the version with the current version - 1.0.0):
 
 ```bash
-docker push registry.172.22.21.115.sslip.io/{{group}}/api:v{{version}}
+docker push registry-172.22.21.115.sslip.io/{{group}}/api:v{{version}}
 ```
 
 Build the Vue Image (replace group with your group id - dad-group-X and the version with the current version - 1.0.0):
 
 ```bash
-docker build -t registry.172.22.21.115.sslip.io/{{group}}/web:v{{version}} --platform linux/amd64 -f ./deployment/DockerfileVue ./vue
+docker build -t registry-172.22.21.115.sslip.io/{{group}}/web:v{{version}} --platform linux/amd64 -f ./deployment/DockerfileVue ./vue
 ```
 
 Push the Vue Image (replace group with your group id - dad-group-X and the version with the current version - 1.0.0):
 
 ```bash
-docker push registry.172.22.21.115.sslip.io/{{group}}/web:v{{version}}
+docker push registry-172.22.21.115.sslip.io/{{group}}/web:v{{version}}
 ```
 
 Build the Node WebSockets Image (replace group with your group id - dad-group-X and the version with the current version - 1.0.0):
 
 ```bash
-docker build -t registry.172.22.21.115.sslip.io/{{group}}/ws:v{{version}} --platform linux/amd64 -f ./deployment/DockerfileWS ./websockets
+docker build -t registry-172.22.21.115.sslip.io/{{group}}/ws:v{{version}} --platform linux/amd64 -f ./deployment/DockerfileWS ./websockets
 ```
 
 Push the Node WebSockets Image (replace group with your group id - dad-group-X and the version with the current version - 1.0.0):
 
 ```bash
-docker push registry.172.22.21.115.sslip.io/{{group}}/ws:v{{version}}
+docker push registry-172.22.21.115.sslip.io/{{group}}/ws:v{{version}}
 ```
 
 ### Deploy Resources to Kubernetes Cluster
