@@ -1,4 +1,4 @@
-FROM oven/bun:1 as build-stage
+FROM oven/bun:1 AS build-stage
 WORKDIR /app
 
 COPY package.json  ./
