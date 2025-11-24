@@ -42,22 +42,14 @@ The repository associated with these tutorials has all the commands defined in a
 
 Each group has access to their own namespace on kubernetes but they need to register the images and deployments with the proper reference to the group. That reference has the format **dad-group-X**, where X is the group number.
 
-### Preparing Laravel
-
-In the case of Laravel we need to make sure the database credentials and the SESSION_DOMAIN (for Sanctum) variables on the .env file are properly configured. Since we want to be able to run them locally we use the Docker file to change those variables. The only one that we must change is the group and that can be done using this flag for the docker build commmand:
-
-```bash
--build-arg GROUP=dad-group-X
-```
-
 ### Preparing Vue
 
 In Vue's case we can take advantage of the `.env` files support of Vite to create a `.env` and a `.env.production` files with the following variables (again X to be replaced with the group number):
 
 ```ini
 # .env
-VITE_API_DOMAIN=localhost:8085
-VITE_WS_CONNECTION=ws://localhost:8086
+VITE_API_DOMAIN=localhost:8000
+VITE_WS_CONNECTION=ws://localhost:3000
 
 
 # .env.production
@@ -99,9 +91,8 @@ On linux we can edit the file directly via `sudo nano /etc/docker/daemon.json` a
 Build the Laravel Image (replace group with your group id - dad-group-X and the version with the current version - 1.0.0):
 
 ```bash
-docker build -t registry-172.22.21.115.sslip.io/{{group}}/api:v{{version}} --platform linux/amd64 \
-    -f ./deployment/DockerfileLaravel ./laravel \
-    --build-arg GROUP={{group}}
+    docker build -t registry-172.22.21.115.sslip.io/{{group}}/api:v{{version}} --platform linux/amd64 \
+    -f ./deployment/DockerfileLaravel ./api
 ```
 
 Push the Laravel Image (replace group with your group id - dad-group-X and the version with the current version - 1.0.0):
@@ -176,6 +167,26 @@ To redeploy the application stack you can run:
 kubectl -n dad-group-X rollout restart deployment/laravel-app
 kubectl -n dad-group-X rollout restart deployment/vue-app
 kubectl -n dad-group-X rollout restart deployment/websocket-server
+```
 
+### Checking the Logs
+
+To check the logs of a particular component we can run these commands:
+
+```bash
+
+kubectl get pods
+
+# whit the full pod name
+
+kubectl logs <full-pod-name>
 
 ```
+
+## Changing the applications
+
+When you need to change the application code a new container image, with a new version must be built.
+
+If you are using the just command, you can change the version variable at the top of the file, if not you need to run the docker build and docker push commands with the new version.
+
+After that the new version can be defined in the appropriate kubernetes yaml file and run the command `kubectl apply -f deployment/`.
