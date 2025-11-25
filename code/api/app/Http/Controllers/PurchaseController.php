@@ -24,13 +24,19 @@ class PurchaseController extends Controller
         $reference = $validated['reference'];
         $value = $validated['value'];
 
+        error_log($type);
+        error_log($reference);
+        error_log($value);
+
         try{
 
-            $response = Http::post('https://dad-payments-api.vercel.app', [
+            $response = Http::post('https://dad-payments-api.vercel.app/api/debit', [
                 'type' => $type,
                 'reference' => $reference,
                 'value' => $value
             ]);
+
+            error_log($response->status());
 
             if($response->status() !== 201){
                 return response()->json([
