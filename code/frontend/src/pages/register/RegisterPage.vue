@@ -79,9 +79,12 @@ const handleSubmit = async () => {
     toast.promise(authStore.register(formData.value), {
         loading: 'Calling API',
         success: (data) => {
-            return `Register Sucessfull - ${data?.name}`
+            return `Register Sucessfull - Welcome ${data?.user?.name}`
         },
-        error: (data) => `[API Error] - ${data?.response?.data?.message || 'An error occurred'}`,
+        error: (data) =>{ 
+            `[API Error] - ${data?.response?.data?.message || 'An error occurred'}`
+            console.log(data?.response?.data?.message)
+        },
     })
 
     router.push('/')

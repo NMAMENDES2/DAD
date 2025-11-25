@@ -12,6 +12,15 @@
                             <NavigationMenuLink as-child>
                                 <RouterLink to="/testing/websockets">Web Sockets</RouterLink>
                             </NavigationMenuLink>
+                            <NavigationMenuLink v-if="userLoggedIn" as-child>
+                                <RouterLink to="/testing/profile">Profile</RouterLink>
+                            </NavigationMenuLink>
+                            <NavigationMenuLink v-if="userLoggedIn" as-child>
+                                <RouterLink to="/testing/transactions">Transactions</RouterLink>
+                            </NavigationMenuLink>
+                            <NavigationMenuLink v-if="userLoggedIn" as-child>
+                                <RouterLink to="/testing/purchase">Purchase Coins</RouterLink>
+                            </NavigationMenuLink>
                         </li>
                     </NavigationMenuContent>
                 </NavigationMenuItem>

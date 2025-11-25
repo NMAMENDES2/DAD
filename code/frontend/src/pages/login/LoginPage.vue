@@ -68,6 +68,7 @@ const handleSubmit = async () => {
     toast.promise(authStore.login(formData.value), {
         loading: 'Calling API',
         success: (data) => {
+            console.log("API Login Info", data);
             return `Login Sucessfull - ${data?.name}`
         },
         error: (data) => `[API] Error saving game - ${data?.response?.data?.message}`,

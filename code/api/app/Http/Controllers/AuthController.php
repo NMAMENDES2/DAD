@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Models\CoinTransaction;
+use App\Models\CoinTransactionType;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -34,8 +36,8 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request)
     {
-        Log::info('Register method reached');
-        Log::info('Request Data:', $request->all());
+        error_log('Register method reached');
+        error_log('Request Data: ' . print_r($request->all(), true));
 
         $user = User::create([
             'name' => $request->name,
@@ -46,6 +48,16 @@ class AuthController extends Controller
             'blocked' => false,
             'photo_avatar_filname' => null,
             'coins_balance' => 10,
+            'custom' => null,
+        ]);
+
+        CoinTransaction::create([
+            'transaction_datetime' => now(),
+            'user_id' => $user->id,
+            'coin_transaction_type_id' => 1,
+            'match_id' => null,
+            'game_id' => null,
+            'coins' => 10,
             'custom' => null,
         ]);
 

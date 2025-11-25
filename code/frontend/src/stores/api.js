@@ -5,7 +5,20 @@ import { inject, ref } from 'vue'
 export const useAPIStore = defineStore('api', () => {
   const API_BASE_URL = inject('apiBaseURL')
 
-  const token = ref()
+  const token = ref(localStorage.getItem('token'))
+
+  if (token.value) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
+  }
+
+  const setAuthorizationHeader = (token) => {
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    } else {
+      delete axios.defaults.headers.common['Authorization']
+    }
+  }
+
   const gameQueryParameters = ref({
     page: 1,
     filters: {
@@ -16,20 +29,31 @@ export const useAPIStore = defineStore('api', () => {
     },
   })
 
+  // PURCHASE
+  const postPurchase = async (purchaseData) => {
+    const response = await axios.post(`${API_BASE_URL}/purchase`, purchaseData)
+    return response
+  }
+
   // AUTH
   const postLogin = async (credentials) => {
     const response = await axios.post(`${API_BASE_URL}/login`, credentials)
     token.value = response.data.token
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
+    localStorage.setItem('token', token.value)
+    setAuthorizationHeader(token.value)
+    return response
   }
+
   const postLogout = async () => {
     await axios.post(`${API_BASE_URL}/logout`)
     token.value = undefined
-    delete axios.defaults.headers.common['Authorization']
+    localStorage.removeItem('token')
+    setAuthorizationHeader(null)
   }
 
-  const postRegister = async () => {
-    await axios.post(`${API_BASE_URL}/register`)
+  const postRegister = async (credentials) => {
+    const response = await axios.post(`${API_BASE_URL}/register`, credentials)
+    return response
   }
 
   // Users
@@ -37,7 +61,7 @@ export const useAPIStore = defineStore('api', () => {
     return axios.get(`${API_BASE_URL}/users/me`)
   }
 
-  //Games
+  // Games
   const getGames = (resetPagination = false) => {
     if (resetPagination) {
       gameQueryParameters.value.page = 1
@@ -54,6 +78,7 @@ export const useAPIStore = defineStore('api', () => {
       sort_by: gameQueryParameters.value.filters.sort_by,
       sort_direction: gameQueryParameters.value.filters.sort_direction,
     }).toString()
+
     return axios.get(`${API_BASE_URL}/games?${queryParams}`)
   }
 
@@ -61,8 +86,10 @@ export const useAPIStore = defineStore('api', () => {
     postLogin,
     postRegister,
     postLogout,
+    postPurchase,
     getAuthUser,
     getGames,
     gameQueryParameters,
+    setAuthorizationHeader
   }
 })

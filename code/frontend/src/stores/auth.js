@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAPIStore } from './api'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -8,26 +8,38 @@ export const useAuthStore = defineStore('auth', () => {
   const currentUser = ref(undefined)
 
   const isLoggedIn = computed(() => {
-    return currentUser.value !== undefined
+    return !!localStorage.getItem('token')
   })
 
   const currentUserID = computed(() => {
     return currentUser.value?.id
   })
 
+  onMounted(async () => {
+    if (isLoggedIn.value) {
+      const response = await apiStore.getAuthUser()
+      currentUser.value = response.data
+    }
+  })
+
   const login = async (credentials) => {
-    await apiStore.postLogin(credentials)
+    const r = await apiStore.postLogin(credentials)
+    localStorage.setItem('token', r.data.token)
+    apiStore.setAuthorizationHeader(r.data.token)
+
     const response = await apiStore.getAuthUser()
     currentUser.value = response.data
     return response.data
   }
   
   const register = async (credentials) => {
-    await apiStore.postRegister(credentials);
+    const response = await apiStore.postRegister(credentials)
+    return response.data
   }
 
   const logout = async () => {
     await apiStore.postLogout()
+    localStorage.removeItem('token')
     currentUser.value = undefined
   }
 
