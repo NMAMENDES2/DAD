@@ -21,6 +21,10 @@ export const useAuthStore = defineStore('auth', () => {
     currentUser.value = response.data
     return response.data
   }
+  
+  const register = async (credentials) => {
+    await apiStore.postRegister(credentials);
+  }
 
   const logout = async () => {
     await apiStore.postLogout()
@@ -33,5 +37,6 @@ export const useAuthStore = defineStore('auth', () => {
     currentUserID,
     login,
     logout,
+    register,
   }
 })

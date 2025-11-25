@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Testing\Fluent\Concerns\Has;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
         if (! Auth::attempt($request->only('email', 'password'))) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
@@ -25,9 +26,33 @@ class AuthController extends Controller
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
+            'message' => 'Logged in successfully',
             'user' => $user,
             'token' => $token,
         ]);
+    }
+
+    public function register(RegisterRequest $request)
+    {
+        Log::info('Register method reached');
+        Log::info('Request Data:', $request->all());
+
+        $user = User::create([
+            'name' => $request->name,
+            'nickname' => $request->nickname,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'type' => 'P',
+            'blocked' => false,
+            'photo_avatar_filname' => null,
+            'coins_balance' => 10,
+            'custom' => null,
+        ]);
+
+        return response()->json([
+            'user' => $user,
+            'message' => 'Registered successfully'
+        ], 201);
     }
 
     public function logout(Request $request)

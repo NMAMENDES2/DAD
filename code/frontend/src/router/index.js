@@ -1,5 +1,6 @@
 import HomePage from '@/pages/home/HomePage.vue'
 import LoginPage from '@/pages/login/LoginPage.vue'
+import RegisterPage from '@/pages/register/RegisterPage.vue'
 import LaravelPage from '@/pages/testing/LaravelPage.vue'
 import WebsocketsPage from '@/pages/testing/WebsocketsPage.vue'
 import { createRouter, createWebHistory } from 'vue-router'
@@ -14,6 +15,10 @@ const router = createRouter({
     {
       path: '/login',
       component: LoginPage,
+    },
+    {
+      path: '/register',
+      component: RegisterPage
     },
     {
       path: '/testing',
