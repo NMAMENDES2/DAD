@@ -2,22 +2,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: laravel-app
-  namespace: dad-group-x
+  name: laravel-app-v3
+  namespace: dad-group-26
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: laravel-app
+      app: laravel-app-v3
   template:
     metadata:
       labels:
-        app: laravel-app
+        app: laravel-app-v3
     spec:
       priorityClassName: high-priority
       containers:
         - name: api
-          image: registry-172.22.21.115.sslip.io/dad-group-x/api:v1.0.0
+          image: registry-172.22.21.115.sslip.io/dad-group-26/api:v3.0.0
           resources:
             requests:
               memory: "256Mi"
@@ -30,10 +30,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: laravel-app
-  namespace: dad-group-x
+  name: laravel-app-v3
+  namespace: dad-group-26
 spec:
   ports:
     - port: 80
   selector:
-    app: laravel-app
+    app: laravel-app-v3
