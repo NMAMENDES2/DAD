@@ -24,9 +24,17 @@ class PurchaseController extends Controller
         $reference = $validated['reference'];
         $value = $validated['value'];
 
+        if($error = $this->isInvalidReference($type, $reference, $value)) {
+            return response()->json([
+                'message' => $error,
+            ], 422);
+        }
+
         error_log($type);
         error_log($reference);
         error_log($value);
+
+        if($value)
 
         try{
 
@@ -40,7 +48,7 @@ class PurchaseController extends Controller
 
             if($response->status() !== 201){
                 return response()->json([
-                    'error' => 'Payment failed. Please check the details and try again',
+                    'message' => 'Payment failed. Please check the details and try again',
                     'details' => $response->json(),
                 ], 422);
             }
@@ -51,7 +59,7 @@ class PurchaseController extends Controller
             $user->save();
 
             $coinTransaction = CoinTransaction::create([
-                'transaction_datetime' => now()->format('Y-m-d H:i:s'),
+                'transaction_datetime' => now(),
                 'user_id' => $user->id,
                 'coin_transaction_type_id' => 2,
                 'match_id' => null,
@@ -61,9 +69,9 @@ class PurchaseController extends Controller
             ]);
 
             CoinPurchase::create([
-                'transaction_datetime' => now()->format('Y-m-d H:i:s'),
+                'purchase_datetime' => now(),
                 'user_id' => $user->id,
-                'coin_transaction_id' => $coinTransaction,
+                'coin_transaction_id' => $coinTransaction->id,
                 'euros' => $value,
                 'payment_type' => $type,
                 'payment_reference' => $reference,
@@ -77,8 +85,90 @@ class PurchaseController extends Controller
 
         }catch(Exception $e){
             return response()->json([
-                'error' => 'An unexpected error occurred during the purchase process.'
+                'message' => 'An unexpected error occurred during the purchase process.',
+                'details' => $e->getMessage(),
             ]);
         }
     }
+
+    private function isInvalidReference($type, $reference, $value)
+{
+    $error = null;
+
+    switch ($type) {
+        case 'MBWAY':
+            if (substr($reference, 0, 2) == '90') {
+                $error = 'Invalid MBWAY phone number. Phone numbers starting with "90" are not allowed.';
+                break; 
+            }
+           
+            if ($value > 5) {
+                $error = 'MBWAY transactions cannot exceed €5.';
+                break;
+            }
+            break;
+
+        case 'PAYPAL':
+           
+            if (substr($reference, 0, 2) == 'xx') {
+                $error = 'Invalid PayPal email address. Emails starting with "xx" are not allowed.';
+                break;
+            }
+            
+            if ($value > 10) {
+                $error = 'PayPal transactions cannot exceed €10.';
+                break;
+            }
+            break;
+
+        case 'IBAN':
+           
+            if (substr($reference, 0, 2) == 'XX') {
+                $error = 'Invalid IBAN format. IBANs starting with "XX" are not allowed.';
+                break;
+            }
+
+            if ($value > 50) {
+                $error = 'IBAN transactions cannot exceed €50.';
+                break;
+            }
+            break;
+
+        case 'MB':
+           
+            if (substr($reference, 0, 1) == '9') {
+                $error = 'Invalid MB entity number. Entity numbers starting with "9" are not allowed.';
+                break;
+            }
+
+            if ($value > 20) {
+                $error = 'MB transactions cannot exceed €20.';
+                break;
+            }
+            break;
+
+        case 'VISA':
+          
+            if (substr($reference, 0, 2) == '40') {
+                $error = 'Invalid VISA card reference. Card numbers starting with "40" are not allowed.';
+                break;
+            }
+          
+            if ($value > 30) {
+                $error = 'VISA transactions cannot exceed €30.';
+                break;
+            }
+            break;
+
+        default:
+            return false; 
+    }
+
+    if ($error) {
+        return $error;
+    }
+
+    return false; 
+}
+
 }

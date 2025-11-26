@@ -6,6 +6,7 @@ export const usePurchaseStore = defineStore('purchase', () => {
 
     const purchase = async (purchaseData) => {
         const response = await apiStore.postPurchase(purchaseData);
+        console.log(response.data)
         return response.data
     }
 
