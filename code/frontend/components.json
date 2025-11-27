@@ -1,7 +1,8 @@
 {
-  "$schema": "https://shadcn-vue.com/schema.json",
+  "$schema": "https://ui.shadcn.com/schema.json",
   "style": "new-york",
-  "typescript": false,
+  "rsc": false,
+  "tsx": false,
   "tailwind": {
     "config": "",
     "css": "src/index.css",
@@ -15,7 +16,7 @@
     "utils": "@/lib/utils",
     "ui": "@/components/ui",
     "lib": "@/lib",
-    "composables": "@/composables"
+    "hooks": "@/hooks"
   },
   "registries": {}
 }
