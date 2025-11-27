@@ -79,6 +79,7 @@ import { ref, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import { useGameStore } from '@/stores/game'
 
 const gameModes = {
   SINGLE_PLAYER_MATCH: 'Single Player Match',
@@ -98,6 +99,8 @@ const router = useRouter()
 const currentGameMode = ref('')
 const currentGameVariant = ref('')
 
+const game = useGameStore();
+
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 
 const setGameMode = (mode) => {
@@ -109,9 +112,31 @@ const setGameVariant = (variant) => {
   currentGameVariant.value = gameVariants[variant]
 }
 
+
 const startGame = () => {
   if (currentGameMode.value && currentGameVariant.value) {
-    router.push({ name: 'GamePage', params: { mode: currentGameMode.value, variant: currentGameVariant.value } })
+    // Check if it's multiplayer
+    if (currentGameMode.value.includes('Multiplayer')) {
+      // Go to lobby for multiplayer
+      router.push({ 
+        name: 'Lobby', 
+        params: { 
+          mode: currentGameMode.value, 
+          variant: currentGameVariant.value
+        } 
+      })
+    } else {
+      // Single player - deal cards and go directly to game
+      const numCards = currentGameVariant.value === 'Bisca de 3' ? 3 : 9
+      game.deal(numCards)
+      router.push({ 
+        name: 'GamePage', 
+        params: { 
+          mode: currentGameMode.value, 
+          variant: currentGameVariant.value
+        } 
+      })
+    }
   }
 }
 </script>
