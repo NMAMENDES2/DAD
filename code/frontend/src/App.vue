@@ -34,7 +34,6 @@ const year = new Date().getFullYear()
 const pageTitle = ref(`DAD ${year}/${String(year + 1).slice(-2)}`)
 
 
-
 const logout = () => {
 
   toast.promise(authStore.logout(), {

@@ -13,13 +13,13 @@
                                 <RouterLink to="/testing/websockets">Web Sockets</RouterLink>
                             </NavigationMenuLink>
                             <NavigationMenuLink v-if="userLoggedIn" as-child>
-                                <RouterLink to="/testing/profile">Profile</RouterLink>
+                                <RouterLink to="/profile">Profile</RouterLink>
                             </NavigationMenuLink>
                             <NavigationMenuLink v-if="userLoggedIn" as-child>
-                                <RouterLink to="/testing/transactions">Transactions</RouterLink>
+                                <RouterLink to="/transactions">Transactions</RouterLink>
                             </NavigationMenuLink>
                             <NavigationMenuLink v-if="userLoggedIn" as-child>
-                                <RouterLink to="/testing/purchase">Purchase Coins</RouterLink>
+                                <RouterLink to="/purchase">Purchase Coins</RouterLink>
                             </NavigationMenuLink>
                         </li>
                     </NavigationMenuContent>

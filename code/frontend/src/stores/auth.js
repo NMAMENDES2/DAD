@@ -6,14 +6,11 @@ export const useAuthStore = defineStore('auth', () => {
   const apiStore = useAPIStore()
 
   const currentUser = ref(undefined)
+  const loggedInState = ref(!!localStorage.getItem('token'))
 
-  const isLoggedIn = computed(() => {
-    return !!localStorage.getItem('token')
-  })
+  const isLoggedIn = computed(() => loggedInState.value)
 
-  const currentUserID = computed(() => {
-    return currentUser.value?.id
-  })
+  const currentUserID = computed(() => currentUser.value?.id)
 
   onMounted(async () => {
     if (isLoggedIn.value) {
@@ -29,9 +26,11 @@ export const useAuthStore = defineStore('auth', () => {
 
     const response = await apiStore.getAuthUser()
     currentUser.value = response.data
+    loggedInState.value = true 
+
     return response.data
   }
-  
+
   const register = async (credentials) => {
     const response = await apiStore.postRegister(credentials)
     return response.data
@@ -41,6 +40,7 @@ export const useAuthStore = defineStore('auth', () => {
     await apiStore.postLogout()
     localStorage.removeItem('token')
     currentUser.value = undefined
+    loggedInState.value = false
   }
 
   return {

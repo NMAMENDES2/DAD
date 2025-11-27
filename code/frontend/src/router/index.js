@@ -1,3 +1,4 @@
+import GamePage from '@/pages/game/GamePage.vue'
 import HomePage from '@/pages/home/HomePage.vue'
 import LoginPage from '@/pages/login/LoginPage.vue'
 import PurchasePage from '@/pages/purchase/PurchasePage.vue'
@@ -13,6 +14,12 @@ const router = createRouter({
     {
       path: '/',
       component: HomePage,
+    },
+    {
+      path: '/game/:mode/:variant', 
+      name: 'GamePage',
+      component: GamePage,
+      props: true,  
     },
     {
       path: '/login',
