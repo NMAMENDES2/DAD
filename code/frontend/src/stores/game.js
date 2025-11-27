@@ -22,8 +22,8 @@ export const useGameStore = defineStore('game', () => {
 
   const faceDownCard = { image: '/cards/semFace.png', title: 'Carta virada para baixo' }
 
-  const player1 = ref([]) // Human player
-  const player2 = ref([]) // Bot player
+  const player1 = ref([]) 
+  const player2 = ref([]) 
   const remainingDeck = ref([])
   const board = ref([]) 
   const dealer = ref(null)
@@ -55,16 +55,14 @@ export const useGameStore = defineStore('game', () => {
     waitingForDraw.value = false
     trump.value = remainingDeck.value[remainingDeck.value.length - 1]
     
-    // Randomly select dealer for first game, then alternate
     if (dealer.value === null) {
       dealer.value = Math.random() < 0.5 ? 1 : 2
     } else {
-      dealer.value = dealer.value === 1 ? 2 : 1 // Alternate dealer
+      dealer.value = dealer.value === 1 ? 2 : 1 
     }
     
-    currentTurn.value = dealer.value === 1 ? 2 : 1 // Non-dealer leads
+    currentTurn.value = dealer.value === 1 ? 2 : 1 
     
-    // If bot starts, make it play after a short delay
     if (currentTurn.value === 2) {
       setTimeout(() => botPlay(), 800)
     }
@@ -79,7 +77,6 @@ export const useGameStore = defineStore('game', () => {
     const playerHand = player === 1 ? player1.value : player2.value
     card = playerHand[index]
 
-    // Final phase: must follow suit if possible (when stock is empty)
     if (remainingDeck.value.length === 0 && board.value.length === 1) {
       const leadCard = board.value[0]
       const hasSameSuit = playerHand.some(c => c.suit === leadCard.suit)
@@ -89,7 +86,6 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
-    // Remove card from hand
     if (player === 1) {
       card = player1.value.splice(index, 1)[0]
       currentTurn.value = 2
@@ -106,7 +102,6 @@ export const useGameStore = defineStore('game', () => {
         checkGameWinner()
       }, 1000)
     } else if (player === 1 && currentTurn.value === 2) {
-      // Human played first, bot plays second
       setTimeout(() => botPlay(), 800)
     }
 
@@ -120,10 +115,8 @@ export const useGameStore = defineStore('game', () => {
     let cardIndex = 0
 
     if (board.value.length === 1) {
-      // Bot is playing second - try to win
       cardIndex = botPlaySecond(botHand, board.value[0])
     } else {
-      // Bot is playing first - play lowest value card
       cardIndex = botPlayFirst(botHand)
     }
 

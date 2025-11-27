@@ -54,11 +54,13 @@
         <h2 class="text-xl font-semibold mb-2 text-center">Board</h2>
 
         <div class="flex justify-center space-x-6">
-          <Card v-for="(card, index) in game.board" :key="index" class="w-24 h-32 flex items-center justify-center shadow-lg rounded-lg">
-            <CardContent class="p-0 flex items-center justify-center">
-              <img :src="card.image" :alt="card.title" class="w-auto h-full object-contain" />
-            </CardContent>
-          </Card>
+          <div 
+            v-for="(cardItem, index) in game.board" 
+            :key="index" 
+            class="w-24 h-32 flex items-center justify-center shadow-lg rounded-lg bg-white"
+          >
+            <img :src="cardItem.image" :alt="cardItem.title" class="w-full h-full object-contain" />
+          </div>
 
           <div v-if="game.board.length === 0" class="w-24 h-32 flex items-center justify-center border-2 border-dashed rounded-lg text-gray-400">
             Empty
@@ -69,40 +71,34 @@
       <div class="w-full max-w-4xl mx-auto mb-8">
         <h2 class="text-xl font-semibold mb-2 text-center">Your Hand (Player 1)</h2>
         <div class="flex justify-center space-x-4">
-          <Card
-            v-for="(card, index) in game.player1"
+          <div
+            v-for="(cardItem, index) in game.player1"
             :key="index"
-            class="w-24 h-32 flex items-center justify-center shadow-lg rounded-lg cursor-pointer hover:scale-105 transition-transform"
+            class="w-24 h-32 flex items-center justify-center shadow-lg rounded-lg bg-white cursor-pointer hover:scale-105 transition-transform"
             :class="{ 'opacity-50': game.currentTurn !== 1 || game.waitingForDraw }"
             @click="playCard(1, index)"
           >
-            <CardContent class="p-0 flex items-center justify-center">
-              <img :src="card.image" :alt="card.title" class="w-auto h-full object-contain" />
-            </CardContent>
-          </Card>
+            <img :src="cardItem.image" :alt="cardItem.title" class="w-full h-full object-contain" />
+          </div>
         </div>
       </div>
 
       <div class="absolute right-12 top-1/2 -translate-y-1/2 flex flex-col items-center space-y-4">
-        <Card
+        <div
           v-if="game.remainingDeck.length > 0"
-          class="w-24 h-32 flex items-center justify-center shadow-lg rounded-lg cursor-pointer hover:scale-105 transition-transform"
+          class="w-24 h-32 flex items-center justify-center shadow-lg rounded-lg bg-white cursor-pointer hover:scale-105 transition-transform"
           :class="{ 'ring-4 ring-yellow-400': game.waitingForDraw && game.currentTurn === 1 }"
           @click="drawCard()"
         >
-          <CardContent class="p-0 flex items-center justify-center">
-            <img :src="game.faceDownCard.image" alt="Deck - Click to draw" class="w-auto h-full object-contain" />
-          </CardContent>
-        </Card>
+          <img :src="game.faceDownCard.image" alt="Deck - Click to draw" class="w-full h-full object-contain" />
+        </div>
         <div v-if="game.remainingDeck.length > 0" class="text-sm font-semibold text-gray-600">
           {{ game.remainingDeck.length }} cards
         </div>
 
-        <Card v-if="game.trump" class="w-24 h-32 flex items-center justify-center shadow-lg rounded-lg">
-          <CardContent class="p-0 flex items-center justify-center">
-            <img :src="game.trump.image" :alt="game.trump.title" class="w-auto h-full object-contain" />
-          </CardContent>
-        </Card>
+        <div v-if="game.trump" class="w-24 h-32 flex items-center justify-center shadow-lg rounded-lg bg-white">
+          <img :src="game.trump.image" :alt="game.trump.title" class="w-full h-full object-contain" />
+        </div>
         <div v-if="game.trump" class="text-xs font-semibold text-gray-600">
           Trump
         </div>
@@ -114,13 +110,16 @@
 <script setup>
 import { useGameStore } from "@/stores/game"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { ref, computed, onMounted } from "vue"
-import { useAuthStore } from "@/stores/auth"
+import { ref, computed } from "vue"
+import { useRoute } from "vue-router"
 
-const authStore = useAuthStore()
 const game = useGameStore()
 const warning = ref("")
+
+const route = useRoute();
+
+const mode = route.params.mode
+const variant = route.params.variant
 
 const isGameActive = computed(() => {
   return game.player1.length > 0 || game.player2.length > 0 || game.remainingDeck.length > 0
