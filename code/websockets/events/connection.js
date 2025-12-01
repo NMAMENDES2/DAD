@@ -1,5 +1,11 @@
+import { registerLobbyEvents } from "./lobby.js";
+
 export const handleConnectionEvents = (io, socket) => {
-  socket.on("echo", (msg) => {
-    socket.emit("echo", msg);
+  console.log(`Handling events for socket: ${socket.id}`);
+
+  registerLobbyEvents(io, socket);
+
+  socket.on("ping", () => {
+    socket.emit("pong");
   });
 };
