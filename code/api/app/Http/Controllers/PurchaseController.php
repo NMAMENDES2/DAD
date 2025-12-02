@@ -38,7 +38,7 @@ class PurchaseController extends Controller
 
         try{
 
-            $response = Http::post('https://dad-payments-api.vercel.app/api/debit', [
+            $response = Http::withoutVerifying()->post('https://dad-payments-api.vercel.app/api/debit', [
                 'type' => $type,
                 'reference' => $reference,
                 'value' => $value
