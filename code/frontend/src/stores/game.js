@@ -8,6 +8,9 @@ export const useGameStore = defineStore('game', () => {
 
   const cardPoints = { 1: 11, 7: 10, 13: 4, 11: 3, 12: 2 }
 
+  const cardPower = { 1: 5, 7: 4, 13: 3, 11: 2, 12: 1 }
+
+
   suits.forEach(suit => {
     ranks.forEach(rank => {
       cards.push({
@@ -40,6 +43,12 @@ export const useGameStore = defineStore('game', () => {
   const matchWinner = ref(null)
   const waitingForDraw = ref(false)
 
+  // bot go brr
+  const getPower = (card) => {
+    if (!card) return 0
+    return cardPower[card.rank] ?? 0
+  }
+
   const deal = (num = 9) => {
     const shuffled = [...cards].sort(() => 0.5 - Math.random())
     player1.value = shuffled.slice(0, num)
@@ -53,7 +62,9 @@ export const useGameStore = defineStore('game', () => {
     player2Points.value = 0
     winner.value = null
     waitingForDraw.value = false
-    trump.value = remainingDeck.value[remainingDeck.value.length - 1]
+    
+    // para o trunfo nao desaparecer so pq sim
+    trump.value = remainingDeck.value.length > 0 ? remainingDeck.value[remainingDeck.value.length - 1] : null
     
     if (dealer.value === null) {
       dealer.value = Math.random() < 0.5 ? 1 : 2
@@ -64,45 +75,60 @@ export const useGameStore = defineStore('game', () => {
     currentTurn.value = dealer.value === 1 ? 2 : 1 
     
     if (currentTurn.value === 2) {
-      setTimeout(() => botPlay(), 800)
+      setTimeout(() => botPlay(), 500)
     }
   }
 
+  // nao estava implementado esta regra
+  
+  const hasSuit = (hand, suit) => hand.some(c => c.suit === suit)
+
+  const isLegalPlay = (player, hand, cardIndex) => {
+    const leadCard = board.value[0]
+    const chosen = hand[cardIndex]
+    
+    if (!leadCard) return true
+
+    if (remainingDeck.value.length === 0) {
+      const mustFollow = hasSuit(hand, leadCard.suit)
+      if (mustFollow && chosen.suit !== leadCard.suit) {
+        return false
+      }
+    }
+     return true
+  }
+
   const playCard = (player, index) => {
+    const playerHand = player === 1 ? player1.value : player2.value
+
     if (currentTurn.value !== player) return { success: false, message: "Not your turn" }
     if (winner.value) return { success: false, message: "Game is over" }
     if (waitingForDraw.value) return { success: false, message: "Click the deck to draw cards first" }
+    if (index < 0 || index >= playerHand.length) return { success: false, message: "Invalid card index" }
 
-    let card
-    const playerHand = player === 1 ? player1.value : player2.value
-    card = playerHand[index]
-
-    if (remainingDeck.value.length === 0 && board.value.length === 1) {
-      const leadCard = board.value[0]
-      const hasSameSuit = playerHand.some(c => c.suit === leadCard.suit)
-      
-      if (hasSameSuit && card.suit !== leadCard.suit) {
-        return { success: false, message: "You must follow suit!" }
-      }
+    // valida a jogada com regras que pus
+    if (!isLegalPlay(player, playerHand, index)) {
+      return { success: false, message: "You must follow suit!" }
     }
 
-    if (player === 1) {
-      card = player1.value.splice(index, 1)[0]
-      currentTurn.value = 2
-    } else {
-      card = player2.value.splice(index, 1)[0]
-      currentTurn.value = 1
+    // tira a carta da mao
+    const card = playerHand.splice(index, 1)[0]
+
+    if (card) {
+      board.value.push({ ...card, playedBy: player })
     }
 
-    if (card) board.value.push({...card, playedBy: player})
+    currentTurn.value = player === 1 ? 2 : 1
 
     if (board.value.length === 2) {
       setTimeout(() => {
         evaluateTrick()
         checkGameWinner()
-      }, 1000)
-    } else if (player === 1 && currentTurn.value === 2) {
-      setTimeout(() => botPlay(), 800)
+      }, 800)
+    } else {
+      if (currentTurn.value === 2) {
+        setTimeout(() => botPlay(), 300)
+      }
     }
 
     return { success: true }
@@ -120,77 +146,109 @@ export const useGameStore = defineStore('game', () => {
       cardIndex = botPlayFirst(botHand)
     }
 
+    if (cardIndex < 0 || cardIndex >= botHand.length) cardIndex = 0
+
     playCard(2, cardIndex)
   }
 
   const botPlayFirst = (hand) => {
-    let lowestIndex = 0
-    let lowestValue = hand[0].points
 
-    hand.forEach((card, index) => {
-      if (card.points < lowestValue) {
-        lowestValue = card.points
-        lowestIndex = index
+    //bot vai jogar a carta menos op deproposito
+    let bestIndex = 0
+    let bestPlay = [getPower(hand[0]), hand[0].points, hand[0].suit === trump.value?.suit ? 1 : 0]
+
+     for (let i = 1; i < hand.length; i++) {
+      const h = hand[i]
+      const play = [getPower(h), h.points, h.suit === trump.value?.suit ? 1 : 0]
+      if (
+        play[0] < bestPlay[0] ||
+        (play[0] === bestPlay[0] && play[1] < bestPlay[1]) ||
+        (play[0] === bestPlay[0] && play[1] === bestPlay[1] && play[2] < bestPlay[2])
+      ) {
+        bestIndex = i
+        bestPlay = play
       }
-    })
-
-    return lowestIndex
+    }
+    return bestIndex
   }
+
 
   const botPlaySecond = (hand, leadCard) => {
     const trumpSuit = trump.value?.suit
+    // bro tem de assistir se ja for obrigatorio
+    const mustFollow = remainingDeck.value.length === 0 && hasSuit(hand, leadCard.suit)
+    const indexed = hand.map((c, i) => ({ card: c, index: i }))
 
-    if (remainingDeck.value.length === 0) {
-      const sameSuitCards = hand.map((c, i) => ({ card: c, index: i })).filter(x => x.card.suit === leadCard.suit)
-      
-      if (sameSuitCards.length > 0) {
-        const winningCards = sameSuitCards.filter(x => x.card.rank > leadCard.rank)
-        if (winningCards.length > 0) {
-          return winningCards.reduce((min, curr) => curr.card.points < min.card.points ? curr : min).index
-        } else {
-          return sameSuitCards.reduce((min, curr) => curr.card.points < min.card.points ? curr : min).index
+    if (mustFollow) {
+      const sameSuit = indexed.filter(x => x.card.suit === leadCard.suit)
+      // se tiver cartas do mesmo naipe tenta ganhar com a menos op que ganha
+      const winning = sameSuit.filter(x => getPower(x.card) > getPower(leadCard))
+      if (winning.length > 0) {
+        return winning.reduce((best, cur) => (getPower(cur.card) < getPower(best.card) ? cur : best)).index
+      }
+      // se nao tiver carta que ganha joga a menos op de todas as do mesmo naipe
+      if (sameSuit.length > 0) {
+        return sameSuit.reduce((best, cur) => (getPower(cur.card) < getPower(best.card) ? cur : best)).index
+      }
+    } else {
+      // se nao precisar de assisstir
+      const higherSameSuit = indexed.filter(x => x.card.suit === leadCard.suit && getPower(x.card) > getPower(leadCard))
+
+      // tenta ganhar com o trunfo se o trunfo nao for a primeira jogada
+      if (leadCard.suit !== trumpSuit && leadCard.points === 0) {
+        if (higherSameSuit.length > 0) {
+          return higherSameSuit.reduce((best, cur) => (getPower(cur.card) < getPower(best.card) ? cur : best)).index
+        }
+        const nonTrump = indexed.filter(x => x.card.suit !== trumpSuit)
+        if (nonTrump.length > 0) {
+          return nonTrump.reduce((best, cur) => getPower(cur.card) > getPower(best.card) ? cur : best).index
+        }
+
+      } else if (leadCard.suit !== trumpSuit && leadCard.points > 0) {
+        // se a carta valer pontos 
+        // tenta ganhar com uma do mesmo naipe mais op
+        if (higherSameSuit.length > 0) {
+          return higherSameSuit.reduce((best, cur) => (getPower(cur.card) < getPower(best.card) ? cur : best)).index
+        }
+        // se nao tiver tenta com um trunfo
+        const trumps = indexed.filter(x => x.card.suit === trumpSuit)
+        if (trumps.length > 0) {
+          return trumps.reduce((best, cur) => (getPower(cur.card) < getPower(best.card) ? cur : best)).index
+        }
+
+      } else if (leadCard.suit === trumpSuit) {
+        // se a carta jogada for trunfo jogar um trunfo mais op
+        const higherTrumps = indexed.filter(x => x.card.suit === trumpSuit && getPower(x.card) > getPower(leadCard))
+
+        if (higherTrumps.length > 0) {
+          return higherTrumps.reduce((best, cur) => (getPower(cur.card) < getPower(best.card) ? cur : best)).index
         }
       }
     }
 
-    let winningCards = []
-
-    if (leadCard.suit === trumpSuit) {
-      winningCards = hand.map((c, i) => ({ card: c, index: i }))
-        .filter(x => x.card.suit === trumpSuit && x.card.rank > leadCard.rank)
-    } else {
-      const higherSameSuit = hand.map((c, i) => ({ card: c, index: i }))
-        .filter(x => x.card.suit === leadCard.suit && x.card.rank > leadCard.rank)
-      
-      const trumpCards = hand.map((c, i) => ({ card: c, index: i }))
-        .filter(x => x.card.suit === trumpSuit)
-      
-      winningCards = [...higherSameSuit, ...trumpCards]
-    }
-
-    if (winningCards.length > 0) {
-      return winningCards.reduce((min, curr) => curr.card.points < min.card.points ? curr : min).index
-    } else {
-      return botPlayFirst(hand)
-    }
+    //jogar a carta menos op se for a unica opção restante
+    return botPlayFirst(hand)
   }
 
   const evaluateTrick = () => {
     const [c1, c2] = board.value
+    if (!c1 || !c2) return
+
+    const trumpSuit = trump.value?.suit
     let winnerPlayer
 
     if (c1.suit === c2.suit) {
-      winnerPlayer = c1.rank > c2.rank ? c1.playedBy : c2.playedBy
-    } else if (c2.suit === trump.value.suit) {
-      winnerPlayer = c2.playedBy
-    } else if (c1.suit === trump.value.suit) {
+      winnerPlayer = getPower(c1) > getPower(c2) ? c1.playedBy : c2.playedBy
+    } else if (c1.suit === trumpSuit && c2.suit !== trumpSuit) {
       winnerPlayer = c1.playedBy
+    } else if (c2.suit === trumpSuit && c1.suit !== trumpSuit) {
+      winnerPlayer = c2.playedBy
     } else {
       winnerPlayer = c1.playedBy
     }
 
     lastTrickWinner.value = winnerPlayer
-    const trickPoints = c1.points + c2.points
+    const trickPoints = (c1.points || 0) + (c2.points || 0)
 
     if (winnerPlayer === 1) {
       player1Points.value += trickPoints
@@ -207,13 +265,13 @@ export const useGameStore = defineStore('game', () => {
       currentTurn.value = winnerPlayer
      
       if (winnerPlayer === 2) {
-        setTimeout(() => drawCards(2), 800)
+        setTimeout(() => drawCards(2), 500)
       }
     } else {
       currentTurn.value = winnerPlayer 
       
       if (winnerPlayer === 2) {
-        setTimeout(() => botPlay(), 800)
+        setTimeout(() => botPlay(), 500)
       }
     }
     
@@ -240,10 +298,6 @@ export const useGameStore = defineStore('game', () => {
         player1.value.push(remainingDeck.value.shift())
       }
     }
-    
-    if (remainingDeck.value.length === 0) {
-      trump.value = null 
-    }
 
     waitingForDraw.value = false
     currentTurn.value = lastTrickWinner.value 
@@ -257,10 +311,10 @@ export const useGameStore = defineStore('game', () => {
 
   const checkGameWinner = () => {
     if (player1.value.length === 0 && player2.value.length === 0 && remainingDeck.value.length === 0) {
-      if (player1Points.value >= 61) {
+      if (player1Points.value >= 61 && player1Points.value > player2Points.value) {
         winner.value = 1
         calculateMarks()
-      } else if (player2Points.value >= 61) {
+      } else if (player2Points.value >= 61  && player1Points.value > playerPoints.value) {
         winner.value = 2
         calculateMarks()
       } else if (player1Points.value === player2Points.value) {
@@ -271,6 +325,10 @@ export const useGameStore = defineStore('game', () => {
   }
 
   const calculateMarks = () => {
+    player1Marks.value = 0
+    player2Marks.value = 0
+    matchWinner.value = null
+
     if (player1Points.value >= 120) {
       player1Marks.value = 4 
       matchWinner.value = 1
