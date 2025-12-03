@@ -29,6 +29,15 @@ export const useAPIStore = defineStore('api', () => {
     },
   })
 
+  const transactionQueryParameters = ref({
+    page: 1,
+    filters: {
+      type: '',
+      sort_by: 'transaction_datetime',
+      sort_direction: 'desc',
+    }
+  })
+
   // PURCHASE
   const postPurchase = async (purchaseData) => {
     const response = await axios.post(`${API_BASE_URL}/purchase`, purchaseData)
@@ -61,6 +70,26 @@ export const useAPIStore = defineStore('api', () => {
     return axios.get(`${API_BASE_URL}/users/me`)
   }
 
+  const getUserTransaction = (resetPagination = false) => {
+  if (resetPagination) {
+    transactionQueryParameters.value.page = 1
+  }
+
+  const queryParams = new URLSearchParams({
+    page: transactionQueryParameters.value.page,
+
+    ...(transactionQueryParameters.value.filters.type && {
+      type: transactionQueryParameters.value.filters.type,
+    }),
+
+    sort_by: transactionQueryParameters.value.filters.sort_by,
+    sort_direction: transactionQueryParameters.value.filters.sort_direction,
+  }).toString()
+
+  return axios.get(`${API_BASE_URL}/transactions?${queryParams}`)
+}
+
+
   // Games
   const getGames = (resetPagination = false) => {
     if (resetPagination) {
@@ -89,7 +118,9 @@ export const useAPIStore = defineStore('api', () => {
     postPurchase,
     getAuthUser,
     getGames,
+    getUserTransaction,
     gameQueryParameters,
+    transactionQueryParameters,
     setAuthorizationHeader
   }
 })

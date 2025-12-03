@@ -3,10 +3,12 @@ import HomePage from '@/pages/home/HomePage.vue'
 import LobbyPage from '@/pages/lobby/LobbyPage.vue'
 import LoginPage from '@/pages/login/LoginPage.vue'
 import MultiplayerPage from '@/pages/multiplayer/MultiplayerPage.vue'
+import MultiplayerTest from '@/pages/multiplayer/MultiplayerTest.vue'
 import PurchasePage from '@/pages/purchase/PurchasePage.vue'
 import RegisterPage from '@/pages/register/RegisterPage.vue'
 import LaravelPage from '@/pages/testing/LaravelPage.vue'
 import WebsocketsPage from '@/pages/testing/WebsocketsPage.vue'
+import TransactionsPage from '@/pages/Transactions/TransactionsPage.vue'
 import { useAuthStore } from '@/stores/auth'
 import { createRouter, createWebHistory } from 'vue-router'
 
@@ -29,6 +31,19 @@ const router = createRouter({
       component: LoginPage,
     },
     {
+      path: '/transactions',
+      name: 'Transactions',
+      component: TransactionsPage,
+      beforeEnter: (to, from, next) => {
+        const authStore = useAuthStore();
+        if(authStore.isLoggedIn){
+          next();
+        } else {
+          next('/login');
+        }
+      }
+    },
+    {
       path: '/register',
       component: RegisterPage
     },
@@ -45,6 +60,11 @@ const router = createRouter({
           next('/login');
         }
       }
+    },
+    {
+    path: '/testMultiplayer',
+    name: 'testMultiplayer',
+    component: MultiplayerTest,
     },
     {
       path: '/multiplayer/:mode/:variant/:roomCode',

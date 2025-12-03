@@ -46,4 +46,10 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function coinTransactions()
+{
+    return $this->hasMany(CoinTransaction::class);
+}
+
 }

@@ -22,4 +22,9 @@ class CoinTransaction extends Model
         'coins',
         'custom',
     ];
+
+    public function type()
+{
+    return $this->belongsTo(CoinTransactionType::class, 'coin_transaction_type_id');
+}
 }

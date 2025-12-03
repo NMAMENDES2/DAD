@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\TransactionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +20,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::post('/purchase', [PurchaseController::class, 'purchase']);
+
+    Route::get('/transactions', [TransactionController::class, 'getTransactions']);
 });
 
 Route::apiResource('games', GameController::class);
