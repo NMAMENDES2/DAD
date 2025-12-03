@@ -4,6 +4,7 @@ import LobbyPage from '@/pages/lobby/LobbyPage.vue'
 import LoginPage from '@/pages/login/LoginPage.vue'
 import MultiplayerPage from '@/pages/multiplayer/MultiplayerPage.vue'
 import MultiplayerTest from '@/pages/multiplayer/MultiplayerTest.vue'
+import Profile from '@/pages/profile/Profile.vue'
 import PurchasePage from '@/pages/purchase/PurchasePage.vue'
 import RegisterPage from '@/pages/register/RegisterPage.vue'
 import LaravelPage from '@/pages/testing/LaravelPage.vue'
@@ -19,6 +20,19 @@ const router = createRouter({
       path: '/',
       name: 'Home',
       component: HomePage,
+    },
+    {
+      path: '/profile',
+      name: 'Profile',
+      component: Profile,
+      beforeEnter: (to, from, next) => {
+        const authStore = useAuthStore();
+        if(authStore.isLoggedIn){
+          next();
+        }else{
+          next('/login');
+        }
+      }
     },
     {
       path: '/game/:mode/:variant', 

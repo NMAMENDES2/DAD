@@ -38,4 +38,15 @@ class TransactionController extends Controller
             ],
         ]);
     }
+
+    public function getBalance(Request $request){
+
+        $user = $request->user();
+        $balance = $user->coins_balance;
+
+        return response()->json([
+            'data' => $balance,
+        ]);
+    }
 }
+

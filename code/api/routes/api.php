@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/purchase', [PurchaseController::class, 'purchase']);
 
     Route::get('/transactions', [TransactionController::class, 'getTransactions']);
+    Route::get('/balance', [TransactionController::class, 'getBalance']);
 });
 
 Route::apiResource('games', GameController::class);

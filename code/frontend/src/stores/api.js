@@ -111,6 +111,10 @@ export const useAPIStore = defineStore('api', () => {
     return axios.get(`${API_BASE_URL}/games?${queryParams}`)
   }
 
+  const getBalance = () => {
+    return axios.get(`${API_BASE_URL}/balance`)
+  }
+
   return {
     postLogin,
     postRegister,
@@ -119,6 +123,7 @@ export const useAPIStore = defineStore('api', () => {
     getAuthUser,
     getGames,
     getUserTransaction,
+    getBalance,
     gameQueryParameters,
     transactionQueryParameters,
     setAuthorizationHeader
