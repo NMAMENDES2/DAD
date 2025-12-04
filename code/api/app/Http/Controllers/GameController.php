@@ -58,7 +58,46 @@ class GameController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        // 1. Validar dados (winner_user_id pode ser null se o bot ganhar)
+        $validated = $request->validate([
+            'type' => 'required|string',
+            'status' => 'required|string',
+            'player1_points' => 'required|integer',
+            'player2_points' => 'required|integer',
+            'winner_user_id' => 'nullable|integer|exists:users,id',
+        ]);
+
+        $currentUser = $request->user();
+
+        $game = new Game();
+        $game->type = $validated['type'];
+        $game->status = $validated['status'];
+        
+        // Player 1 é sempre o humano autenticado
+        $game->player1_user_id = $currentUser->id;
+        $game->player2_user_id = null; // Bot
+
+        // Definir Vencedor e Perdedor
+        $game->winner_user_id = $validated['winner_user_id'];
+
+        if ($validated['winner_user_id'] == $currentUser->id) {
+            // Se o humano ganhou, o perdedor é o bot (null)
+            $game->loser_user_id = null;
+        } else {
+            // Se o humano não ganhou (bot ganhou), o humano é o perdedor
+            $game->loser_user_id = $currentUser->id;
+        }
+        
+        $game->player1_points = $validated['player1_points'];
+        $game->player2_points = $validated['player2_points'];
+        
+        $game->began_at = now();
+        $game->ended_at = now();
+        $game->total_time = 0; 
+        
+        $game->save();
+
+        return response()->json($game, 201);
     }
 
     /**

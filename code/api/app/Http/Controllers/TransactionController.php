@@ -3,50 +3,68 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\CoinTransaction; // Certifica-te que importas o Modelo
 
 class TransactionController extends Controller
 {
+    // Listar Transações (Já tinhas este)
     public function getTransactions(Request $request)
     {
         $user = $request->user();
-
         $query = $user->coinTransactions()->with('type');
 
-        if ($request->filled('type')) {
-            $query->whereHas('type', function ($q) use ($request) {
-                $q->where('name', $request->type);
-            });
-            error_log($request->input('type')); // daqui vem 1
+        // Ordenação
+        $sortBy = $request->input('sort_by', 'transaction_datetime');
+        $sortDirection = $request->input('sort_direction', 'desc');
+        
+        // Verifica se a coluna de ordenação existe para evitar erros de SQL
+        $allowedSorts = ['transaction_datetime', 'coins', 'id'];
+        if(in_array($sortBy, $allowedSorts)) {
+            $query->orderBy($sortBy, $sortDirection);
+        } else {
+            $query->orderBy('transaction_datetime', 'desc');
         }
 
-        $sortBy = $request->input('sort_by', 'began_at');  
-        $sortDirection = $request->input('sort_direction', 'desc');
+        $transactions = $query->paginate((int)$request->input('per_page', 20));
 
-        $query->orderBy($sortBy, $sortDirection);
-
-        $page = (int) $request->input('page', 1);
-        $perPage = (int) $request->input('per_page', 20);
-
-        $transactions = $query->paginate($perPage, ['*'], 'page', $page);
-
-        return response()->json([
-            'data' => $transactions->items(),
-            'meta' => [
-                'current_page' => $transactions->currentPage(),
-                'last_page' => $transactions->lastPage(),
-                'total' => $transactions->total(),
-            ],
-        ]);
+        return response()->json($transactions);
     }
 
+    // Saldo (Já tinhas este)
     public function getBalance(Request $request){
+        return response()->json(['data' => $request->user()->coins_balance]);
+    }
+
+    // --- NOVO: Criar Transação (O que faltava) ---
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'coin_transaction_type_id' => 'required|integer',
+            'coins' => 'required|integer',
+        ]);
 
         $user = $request->user();
-        $balance = $user->coins_balance;
+        $amount = (int) $validated['coins'];
 
-        return response()->json([
-            'data' => $balance,
+        // Verificar saldo se for débito
+        if ($amount < 0 && $user->coins_balance < abs($amount)) {
+            return response()->json(['message' => 'Saldo insuficiente'], 400);
+        }
+
+        // Atualizar Saldo
+        $user->coins_balance += $amount;
+        $user->save();
+
+        // Criar Registo
+        // Usamos o modelo diretamente para evitar erros se a relação no User não estiver definida
+        $transaction = CoinTransaction::create([
+            'user_id' => $user->id,
+            'coin_transaction_type_id' => $validated['coin_transaction_type_id'],
+            'coins' => $amount,
+            'transaction_datetime' => now(),
+            // 'game_id' => null, // Podes adicionar se enviares do Android
         ]);
+
+        return response()->json($user); // Retorna o user atualizado
     }
 }
-
