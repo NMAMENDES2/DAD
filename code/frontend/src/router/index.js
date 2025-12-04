@@ -1,8 +1,6 @@
 import GamePage from '@/pages/game/GamePage.vue'
 import HomePage from '@/pages/home/HomePage.vue'
-import LobbyPage from '@/pages/lobby/LobbyPage.vue'
 import LoginPage from '@/pages/login/LoginPage.vue'
-import MultiplayerPage from '@/pages/multiplayer/MultiplayerPage.vue'
 import MultiplayerTest from '@/pages/multiplayer/MultiplayerTest.vue'
 import Profile from '@/pages/profile/Profile.vue'
 import PurchasePage from '@/pages/purchase/PurchasePage.vue'
@@ -62,37 +60,9 @@ const router = createRouter({
       component: RegisterPage
     },
     {
-      path: '/lobby/:mode/:variant',
-      name: 'Lobby',
-      component: LobbyPage,
-      props: true,
-      beforeEnter: (to, from, next) => {
-        const authStore = useAuthStore();
-        if(authStore.isLoggedIn){
-          next();
-        } else {
-          next('/login');
-        }
-      }
-    },
-    {
     path: '/testMultiplayer',
     name: 'testMultiplayer',
     component: MultiplayerTest,
-    },
-    {
-      path: '/multiplayer/:mode/:variant/:roomCode',
-      name: 'MultiplayerGame',
-      component: MultiplayerPage,
-      props: true,
-      beforeEnter: (to, from, next) => {
-        const authStore = useAuthStore();
-        if(authStore.isLoggedIn){
-          next();
-        } else {
-          next('/login');
-        }
-      }
     },
     {
       path: '/purchase',

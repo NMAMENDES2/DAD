@@ -11,7 +11,6 @@
         {{ warning }}
       </div>
 
-      <!-- Single Player: Game state lost warning -->
       <div v-if="!isMultiplayer && !isGameActive" class="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded-lg text-center">
         <p class="text-yellow-800 font-semibold mb-2">Game state was lost. Please start a new game!</p>
         <div class="flex gap-4 justify-center mt-4">
@@ -30,7 +29,6 @@
         </Button>
       </div>
 
-      <!-- Single Player: Score Display -->
       <div v-if="!isMultiplayer" class="flex gap-8 mb-8 text-lg font-semibold justify-center">
         <div class="text-center">
           <div class="text-blue-600">You: {{ game.player1Points }} pts</div>
@@ -42,7 +40,6 @@
         </div>
       </div>
 
-      <!-- Single Player: Winner and Buttons -->
       <div v-if="!isMultiplayer && game.winner" class="mb-4 text-2xl font-bold text-green-600 text-center">
         {{ game.winner === 1 ? 'You Win!' : game.winner === 2 ? 'Bot Wins!' : 'Draw!' }}
       </div>

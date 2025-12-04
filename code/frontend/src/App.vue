@@ -24,10 +24,8 @@ import { ref, onMounted } from 'vue';
 import { Toaster } from '@/components/ui/sonner'
 import NavBar from './components/layout/NavBar.vue';
 import { useAuthStore } from './stores/auth';
-import { useSocketStore } from './stores/socket';
 
 const authStore = useAuthStore()
-const socketStore = useSocketStore()
 
 
 const year = new Date().getFullYear()
@@ -45,11 +43,6 @@ const logout = () => {
   })
 
 }
-
-onMounted(() => {
-  socketStore.handleConnection()
-})
-
 
 </script>
 

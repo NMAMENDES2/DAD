@@ -12,12 +12,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   const currentUserID = computed(() => currentUser.value?.id)
 
-  onMounted(async () => {
-    if (isLoggedIn.value) {
-      const response = await apiStore.getAuthUser()
-      currentUser.value = response.data
-    }
-  })
+  const fetchUser = async () => {
+    const response = await apiStore.getAuthUser()
+    currentUser.value = response.data
+    return response.data
+  }
 
   const login = async (credentials) => {
     const r = await apiStore.postLogin(credentials)
@@ -50,5 +49,6 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     logout,
     register,
+    fetchUser,
   }
 })
