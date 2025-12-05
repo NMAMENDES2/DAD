@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\CoinTransaction; // Certifica-te que importas o Modelo
+use App\Models\CoinTransaction; 
 
 class TransactionController extends Controller
 {

@@ -1,7 +1,8 @@
 import GamePage from '@/pages/game/GamePage.vue'
 import HomePage from '@/pages/home/HomePage.vue'
 import LoginPage from '@/pages/login/LoginPage.vue'
-import MultiplayerTest from '@/pages/multiplayer/MultiplayerTest.vue'
+import Lobby from '@/pages/multiplayer/Lobby.vue'
+import MultiplayerTest from '@/pages/multiplayer/Lobby.vue'
 import Profile from '@/pages/profile/Profile.vue'
 import PurchasePage from '@/pages/purchase/PurchasePage.vue'
 import RegisterPage from '@/pages/register/RegisterPage.vue'
@@ -23,14 +24,7 @@ const router = createRouter({
       path: '/profile',
       name: 'Profile',
       component: Profile,
-      beforeEnter: (to, from, next) => {
-        const authStore = useAuthStore();
-        if(authStore.isLoggedIn){
-          next();
-        }else{
-          next('/login');
-        }
-      }
+      meta: { requiresAuth: true },
     },
     {
       path: '/game/:mode/:variant', 
@@ -40,41 +34,30 @@ const router = createRouter({
     },
     {
       path: '/login',
+      name: 'login',
       component: LoginPage,
     },
     {
       path: '/transactions',
       name: 'Transactions',
       component: TransactionsPage,
-      beforeEnter: (to, from, next) => {
-        const authStore = useAuthStore();
-        if(authStore.isLoggedIn){
-          next();
-        } else {
-          next('/login');
-        }
-      }
+      meta: { requiresAuth: true }
     },
     {
       path: '/register',
       component: RegisterPage
     },
     {
-    path: '/testMultiplayer',
-    name: 'testMultiplayer',
-    component: MultiplayerTest,
+    path: '/multiplayer',
+    name: 'multiplayer',
+    component: Lobby,
+    meta: { requiresAuth: true}
     },
     {
       path: '/purchase',
+      name: 'purchase',
       component: PurchasePage,
-      beforeEnter: (to, from, next) => {
-        const authStore = useAuthStore();
-        if(authStore.isLoggedIn){
-          next();
-        } else {
-          next({name: 'Login'});
-        }
-      }
+      meta: { requiresAuth: true}
     },
     {
       path: '/testing',
@@ -90,6 +73,16 @@ const router = createRouter({
       ],
     },
   ],
+})
+
+
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore();
+
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    return next({ name: 'login' })
+  }
+  next()
 })
 
 export default router

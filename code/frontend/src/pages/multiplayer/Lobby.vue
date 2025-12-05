@@ -31,6 +31,19 @@ onMounted(() => {
     socket.emit('getLobbies');
 });
 
+const startGame = () => {
+    if (players.value.length === 2) {
+        const isHost = players.value.find(p => p.id === playerID.value && p.isCreator);
+        if(!isHost){
+          toast.error('Only the host can start the game!');
+          return;
+        }
+        socket.emit('startGame', lobbyID.value);
+    } else {
+        toast.error('Need 2 players to start the game!');
+    }
+}
+
 const createLobby = (type) => {
     const newLobbyID = Math.random().toString(36).substring(2, 8).toUpperCase();
     lobbyID.value = newLobbyID;
@@ -96,6 +109,11 @@ socket.on('lobbyDismantled', (message) => {
     lobbyID.value;
     players.value = []
 })
+
+socket.on('gameStarted', (data)=> {
+    console.log("Your hand:", data.hand);
+    console.log("All players:", data.players);
+});
 
 onUnmounted(() => {
     socket.off('playerID');
@@ -239,7 +257,10 @@ onUnmounted(() => {
           </div>
 
           <div v-if="players.length === 2">
-            <Button class="w-full" size="lg">
+            <Button 
+            v-if="players.find(p => p.id === playerID && p.isCreator)"
+            @click="startGame" 
+            class="w-full" size="lg">
               Start Game
             </Button>
           </div>

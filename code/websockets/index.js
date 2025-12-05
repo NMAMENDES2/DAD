@@ -1,96 +1,173 @@
-import {Server} from "socket.io"
+import { Server } from "socket.io"
+import { dealCards } from "./game.js"
 
 const PORT = process.env.PORT || 3000;
-
 const io = new Server(PORT, {
     cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-console.log(`Socket.IO server running on port ${PORT}`);
-
-// In-memory lobby store
+// Lobby logic
 const lobbies = {};
 
-function generateDeck() {
-    const suits = ['c', 'o', 'e', 'p'];
-    const ranks = ['1','2','3','4','5','6','7','11','12','13'];
-    const cardPoints = { 1:11,7:10,13:4,11:3,12:2 };
-    const deck = [];
-    suits.forEach(suit => ranks.forEach(rank => {
-        deck.push({ suit, rank:Number(rank), points: cardPoints[rank] || 0 });
+function getAvailableLobbies() {
+    const result = Object.entries(lobbies).map(([id, lobby]) => ({
+        id,
+        playerCount: lobby.players.length,
+        maxPlayers: 2,
+        isFull: lobby.players.length >= 2,
+        type: lobby.type,
+        creatorId: lobby.creatorId,
+        creatorNickname: lobby.creatorNickname,
+        players: lobby.players.map(p => ({
+            nickname: p.nickname,
+            isCreator: p.isCreator
+        }))
     }));
-    return deck;
+    console.log('Sending lobbies:', result)
+    return result;
 }
 
-function shuffle(array) {
-    const arr = [...array];
-    for (let i = arr.length-1; i>0; i--) {
-        const j = Math.floor(Math.random()*(i+1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
+function broadcastLobbyList() {
+    io.emit('lobbyList', getAvailableLobbies());
 }
 
-io.on("connection", socket => {
-    console.log("Player connected", socket.id);
+io.on('connection', (socket) => {
+    console.log('Player connected:', socket.id);
+    socket.emit('lobbyList', getAvailableLobbies());
 
-    // Join a lobby
-    socket.on("joinLobby", (lobbyId, nickname) => {
-        if (!lobbies[lobbyId]) {
-            lobbies[lobbyId] = { players: [], hands: {}, board: [], currentTurn:null, trump:null };
-        }
-
-        const lobby = lobbies[lobbyId];
-        lobby.players.push({ id: socket.id, nickname });
-        socket.join(lobbyId);
-        console.log(`${nickname} joined lobby ${lobbyId}`);
-
-        // Start game when 2 players joined
-        if (lobby.players.length === 2) {
-            startGame(lobbyId);
-        }
+    socket.on('getLobbies', () => {
+        socket.emit('lobbyList', getAvailableLobbies());
     });
 
-    socket.on("playCard", ({ lobbyId, cardIndex }) => {
+    socket.on('joinLobby', (lobbyId, nickname, type = 'game') => {
+        const playerID = socket.id;
+
+        // Check if this NICKNAME is already in any lobby (prevents same account in multiple lobbies)
+        for (const [existingLobbyId, existingLobby] of Object.entries(lobbies)) {
+            const playerInLobby = existingLobby.players.find(p => p.nickname === nickname);
+            if (playerInLobby) {
+                socket.emit('alreadyInLobby');
+                return;
+            }
+        }
+
+        socket.join(lobbyId);
+        let lobby = lobbies[lobbyId];
+
+        if (!lobby) {
+            lobby = {
+                players: [],
+                deck: [],
+                currentTurn: 0,
+                trump: null,
+                type: type,
+                creatorId: playerID,
+            }
+            lobbies[lobbyId] = lobby;
+        }
+
+        if (lobby.players.length >= 2) {
+            socket.emit('lobbyFull');
+            return;
+        }
+
+        lobby.players.push({
+            id: playerID,
+            nickname: nickname,
+            points: 0,
+            hand: [],
+            isCreator: lobby.players.length === 0
+        });
+
+        io.to(lobbyId).emit('playerUpdate', lobby.players);
+        socket.emit('playerID', {
+            playerID,
+        })
+
+        broadcastLobbyList();
+    });
+
+    socket.on('leaveLobby', (lobbyId, playerId, callback) => {
+        const lobby = lobbies[lobbyId];
+
+        if (!lobby) return callback({ success: false, message: 'Lobby does not exist' });
+
+        const playerIndex = lobby.players.findIndex(p => p.id === playerId);
+        if (playerIndex === -1) return callback({ success: false, message: 'You are not in this lobby' });
+
+        const isCreator = lobby.creatorId === playerId;
+
+        lobby.players.splice(playerIndex, 1);
+        socket.leave(lobbyId);
+
+        if (isCreator) {
+            io.to(lobbyId).emit('lobbyDismantled', 'The host has left the lobby');
+
+            const room = io.sockets.adapter.rooms.get(lobbyId);
+            if (room) {
+                room.forEach(socketId => {
+                    io.sockets.sockets.get(socketId)?.leave(lobbyId);
+                });
+            }
+
+            delete lobbies[lobbyId]
+        }
+
+        if (lobby.players.length === 0) {
+            delete lobbies[lobbyId];
+        } else {
+            io.to(lobbyId).emit('playerUpdate', lobby.players);
+        }
+
+        callback({ success: true, message: 'Left the lobby successfully' });
+        broadcastLobbyList();
+    });
+
+    socket.on('startGame', (lobbyId) => {
         const lobby = lobbies[lobbyId];
         if (!lobby) return;
-
-        const playerIndex = lobby.players.findIndex(p => p.id === socket.id);
-        if (playerIndex === -1) return;
-
-        const playerHand = lobby.hands[socket.id];
-        if (!playerHand || !playerHand[cardIndex]) return;
-
-        const card = playerHand.splice(cardIndex, 1)[0];
-        lobby.board.push({ ...card, playedBy: socket.id });
-
-        io.to(lobbyId).emit("gameState", serializeLobby(lobby));
-    });
-
-    socket.on("disconnect", () => {
-        console.log("Player disconnected", socket.id);
-        Object.values(lobbies).forEach(lobby => {
-            lobby.players = lobby.players.filter(p => p.id !== socket.id);
+        
+        const hands = dealCards(lobby);
+        
+        lobby.players.forEach(player => {
+            player.hand = hands[player.id];
         });
-    });
+        
+        lobby.players.forEach(player => {
+            io.to(player.id).emit('gameStarted', {
+                hand: hands[player.id],
+                players: lobby.players.map(p => ({
+                    id: p.id,
+                    nickname: p.nickname,
+                    points: p.points,
+                    cardCount: hands[p.id].length
+                }))
+            });
+        });
 });
 
-function startGame(lobbyId) {
-    const lobby = lobbies[lobbyId];
-    const deck = shuffle(generateDeck());
-    lobby.players.forEach((p, i) => {
-        lobby.hands[p.id] = deck.slice(i*9, (i+1)*9);
-    });
-    lobby.trump = deck[deck.length-1];
-    lobby.currentTurn = lobby.players[0].id;
+socket.on('disconnect', () => {
+    console.log('Player disconnected:', socket.id);
 
-    io.to(lobbyId).emit("gameState", serializeLobby(lobby));
-}
+    for (const [lobbyId, lobby] of Object.entries(lobbies)) {
+        const playerIndex = lobby.players.findIndex(p => p.id === socket.id);
+        if (playerIndex !== -1) {
+            const isCreator = lobby.creatorId === socket.id;
 
-function serializeLobby(lobby) {
-    const serialized = { board: lobby.board, trump: lobby.trump, hands:{}, currentTurn:lobby.currentTurn };
-    lobby.players.forEach(p => {
-        serialized.hands[p.id] = lobby.hands[p.id].length;
-    });
-    return serialized;
-}
+            lobby.players.splice(playerIndex, 1);
+
+            if (isCreator) {
+                io.to(lobbyId).emit('lobbyDismantled', 'The host has disconnected');
+                delete lobbies[lobbyId];
+            } else if (lobby.players.length === 0) {
+                delete lobbies[lobbyId];
+            } else {
+                io.to(lobbyId).emit('playerUpdate', lobby.players);
+            }
+        }
+        break;
+    }
+
+    broadcastLobbyList();
+});
+});
