@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card/';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'vue-sonner';
 
 const socket = inject('socket');
 const authStore = useAuthStore();
@@ -30,7 +31,53 @@ watch(
   { immediate: true }
 )
 
+// Set up socket listeners BEFORE mounting
+socket.on('playerID', (data) => {
+  playerID.value = data.playerID;
+  console.log('Received playerID:', playerID.value);
+});
+
+socket.on('alreadyInLobby', () => {
+  toast.error('You are already in a lobby!');
+});
+
+socket.on('playerUpdate', (updatedPlayers) => {
+  console.log('Player update received:', updatedPlayers);
+  players.value = updatedPlayers;
+});
+
+socket.on('lobbyFull', () => {
+  toast.error('Lobby is full!');
+});
+
+socket.on('lobbyList', (lobbies) => {
+  availableLobbies.value = lobbies;
+});
+
+socket.on('lobbyDismantled', (message) => {
+  toast.error(message);
+  lobbyID.value = '';
+  lobbyType.value = '';
+  lobbyVariant.value = '3';
+  players.value = [];
+});
+
+// CRITICAL: Listen for game started event
+socket.on('gameStarted', (data) => {
+  console.log('🎮 GAME STARTED EVENT RECEIVED:', data);
+  console.log('Navigate to:', data.navigateTo);
+  
+  if (data.navigateTo) {
+    // Navigate all players to the game screen
+    toast.success('Game starting!');
+    router.push(data.navigateTo);
+  } else {
+    console.error('No navigateTo path in gameStarted event!');
+  }
+});
+
 onMounted(() => {
+  console.log('Lobby component mounted');
   socket.emit('getLobbies');
 });
 
@@ -41,9 +88,17 @@ const startGame = () => {
       toast.error('Only the host can start the game!');
       return;
     }
-    socket.emit('startGame', {lobbyId: lobbyID.value, variant: lobbyVariant.value});
-
-    router.push(`/multiplayer/${lobbyType.value}/${lobbyVariant.value}?lobbyId=${lobbyID.value}`);
+    
+    console.log('🎯 Host starting game with:', {
+      lobbyId: lobbyID.value,
+      variant: lobbyVariant.value
+    });
+    
+    socket.emit('startGame', {
+      lobbyId: lobbyID.value, 
+      variant: lobbyVariant.value
+    });
+    
   } else {
     toast.error('Need 2 players to start the game!');
   }
@@ -52,14 +107,20 @@ const startGame = () => {
 const createLobby = ({type='game', variant='3'}) => {
   const newLobbyID = Math.random().toString(36).substring(2, 8).toUpperCase();
   lobbyID.value = newLobbyID;
-  socket.emit('joinLobby', newLobbyID, nickname.value, type, variant);
   lobbyType.value = type;
+  lobbyVariant.value = variant;
+  
+  console.log('Creating lobby:', { newLobbyID, nickname: nickname.value, type, variant });
+  socket.emit('joinLobby', newLobbyID, nickname.value, type, variant);
 }
 
 const joinLobby = ({id, type='game', variant='3'}) => {
   if (id && String(id).trim() !== '') {
     lobbyID.value = id;
     lobbyType.value = type;
+    lobbyVariant.value = variant;
+    
+    console.log('Joining lobby:', { id, nickname: nickname.value, type, variant });
     socket.emit('joinLobby', id, nickname.value, type, variant);
   } else {
     toast.error('Invalid lobby ID');
@@ -74,6 +135,7 @@ const leaveLobby = () => {
         // Clear all local state
         lobbyID.value = '';
         lobbyType.value = '';
+        lobbyVariant.value = '3';
         players.value = [];
       } else {
         toast.error(response.message);
@@ -88,44 +150,14 @@ const refreshLobbies = () => {
   socket.emit('getLobbies');
 }
 
-socket.on('playerID', (data) => {
-  playerID.value = data.playerID;
-  console.log('Received playerID:', playerID.value);
-});
-
-socket.on('alreadyInLobby', () => {
-  toast.error('You are already in a lobby!');
-});
-
-socket.on('playerUpdate', (updatedPlayers) => {
-  players.value = updatedPlayers;
-});
-
-socket.on('lobbyFull', () => {
-  toast.error('Lobby is full!');
-});
-
-socket.on('lobbyList', (lobbies) => {
-  availableLobbies.value = lobbies;
-});
-
-socket.on('lobbyDismantled', (message) => {
-  toast.error(message);
-  lobbyID.value;
-  players.value = []
-})
-
-socket.on('gameStarted', (data) => {
-  console.log("Your hand:", data.hand);
-  console.log("All players:", data.players);
-});
-
 onUnmounted(() => {
   socket.off('playerID');
   socket.off('alreadyInLobby');
   socket.off('playerUpdate');
   socket.off('lobbyFull');
   socket.off('lobbyList');
+  socket.off('gameStarted');
+  socket.off('lobbyDismantled');
 });
 
 </script>
@@ -232,6 +264,7 @@ onUnmounted(() => {
                   </div>
                   <div>
                     <p class="font-medium">{{ player.nickname }}</p>
+                    <p class="text-xs text-muted-foreground">ID: {{ player.id.substring(0, 8) }}</p>
                   </div>
                 </div>
                 <div class="flex gap-2">
@@ -272,6 +305,10 @@ onUnmounted(() => {
                 Start Game
               </Button>
 
+            </div>
+            <div v-else class="text-center py-4">
+              <p class="text-muted-foreground">Waiting for host to start the game...</p>
+              <p class="text-xs text-muted-foreground mt-2">Your ID: {{ playerID.substring(0, 8) }}</p>
             </div>
           </div>
 
