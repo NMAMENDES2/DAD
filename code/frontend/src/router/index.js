@@ -2,7 +2,7 @@ import GamePage from '@/pages/game/GamePage.vue'
 import HomePage from '@/pages/home/HomePage.vue'
 import LoginPage from '@/pages/login/LoginPage.vue'
 import Lobby from '@/pages/multiplayer/Lobby.vue'
-import MultiplayerTest from '@/pages/multiplayer/Lobby.vue'
+import Multiplayer from '@/pages/multiplayer/Multiplayer.vue'
 import Profile from '@/pages/profile/Profile.vue'
 import PurchasePage from '@/pages/purchase/PurchasePage.vue'
 import RegisterPage from '@/pages/register/RegisterPage.vue'
@@ -33,6 +33,12 @@ const router = createRouter({
       props: true,  
     },
     {
+      path: '/multiplayer/:mode/:variant',
+      name: 'multiplayer',
+      component: Multiplayer,
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/login',
       name: 'login',
       component: LoginPage,
@@ -49,7 +55,7 @@ const router = createRouter({
     },
     {
     path: '/multiplayer',
-    name: 'multiplayer',
+    name: 'multiplayerLobby',
     component: Lobby,
     meta: { requiresAuth: true}
     },
@@ -74,7 +80,6 @@ const router = createRouter({
     },
   ],
 })
-
 
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();

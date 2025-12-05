@@ -1,18 +1,20 @@
-export const dealCards = (lobby) => {
+export const dealCards = (lobby, variant) => {
     const deck = createDeck();
     const shuffled = shuffleDeck(deck);
+
     const hands = {};
+    const num = variant === "3" ? 3 : 9; 
     const numPlayers = lobby.players.length;
-    const cardsPerPlayer = Math.floor(shuffled.length / numPlayers);
-    
-    lobby.players.forEach((player, index) => {
-        hands[player.id] = shuffled.slice(
-            index * cardsPerPlayer, 
-            (index + 1) * cardsPerPlayer
-        );
+
+    lobby.players.forEach((player, i) => {
+        hands[player.id] = shuffled.slice(i * num, (i + 1) * num);
     });
-    return hands;
-}
+
+    const remainingDeck = shuffled.slice(num * numPlayers);
+
+    return { hands, remainingDeck };
+};
+
 
  const shuffleDeck = (deck) => {
     const shuffled = [...deck] 

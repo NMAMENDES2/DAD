@@ -39,10 +39,9 @@ io.on('connection', (socket) => {
         socket.emit('lobbyList', getAvailableLobbies());
     });
 
-    socket.on('joinLobby', (lobbyId, nickname, type = 'game') => {
+    socket.on('joinLobby', (lobbyId, nickname, type = 'game', variant = '3') => {
         const playerID = socket.id;
 
-        // Check if this NICKNAME is already in any lobby (prevents same account in multiple lobbies)
         for (const [existingLobbyId, existingLobby] of Object.entries(lobbies)) {
             const playerInLobby = existingLobby.players.find(p => p.nickname === nickname);
             if (playerInLobby) {
@@ -61,7 +60,9 @@ io.on('connection', (socket) => {
                 currentTurn: 0,
                 trump: null,
                 type: type,
+                variant: variant,
                 creatorId: playerID,
+                remainingDeck: []
             }
             lobbies[lobbyId] = lobby;
         }
@@ -123,16 +124,19 @@ io.on('connection', (socket) => {
         broadcastLobbyList();
     });
 
-    socket.on('startGame', (lobbyId) => {
+    socket.on('startGame', ({ lobbyId, variant }) => {
         const lobby = lobbies[lobbyId];
         if (!lobby) return;
-        
-        const hands = dealCards(lobby);
-        
+
+        const { hands, remainingDeck } = dealCards(lobby, variant);
+
+        lobby.remainingDeck = remainingDeck;
+        lobby.trump = remainingDeck.length ? remainingDeck.at(-1) : null;
+
         lobby.players.forEach(player => {
             player.hand = hands[player.id];
         });
-        
+
         lobby.players.forEach(player => {
             io.to(player.id).emit('gameStarted', {
                 hand: hands[player.id],
@@ -144,7 +148,86 @@ io.on('connection', (socket) => {
                 }))
             });
         });
+    });
+
+    socket.on("drawCard", ({ lobbyID, playerID }) => {
+        const lobby = lobbies[lobbyID];
+        if (!lobby) return;
+
+        if (lobby.lastTrickWinner !== playerID) return;
+
+        const deck = lobby.remainingDeck;
+
+        const winner = lobby.players.find(p => p.id === lobby.lastTrickWinner);
+        const loser = lobby.players.find(p => p.id !== lobby.lastTrickWinner);
+
+        let drawn = {};
+
+        if (deck.length > 0) {
+            drawn.winnerCard = deck.shift();
+        }
+        if (deck.length > 0) {
+            drawn.loserCard = deck.shift();
+        }
+
+        io.to(lobbyID).emit("cardsDrawn", {
+            winnerID: winner.id,
+            loserID: loser.id,
+            ...drawn,
+            remaining: deck.length
+        });
 });
+
+socket.on('playCard', ({ lobbyID, playerID, cardIndex }) => {
+    const lobby = lobbies[lobbyID];
+    if (!lobby) return;
+
+    const player = lobby.players.find(p => p.id === playerID);
+    if (!player || !player.hand[cardIndex]) return;
+
+    if (lobby.currentTurn && lobby.currentTurn !== playerID) return;
+
+    const card = player.hand.splice(cardIndex, 1)[0];
+    lobby.board = lobby.board || [];
+    lobby.board.push({ ...card, playedBy: playerID });
+
+    const otherPlayer = lobby.players.find(p => p.id !== playerID);
+    lobby.currentTurn = otherPlayer.id;
+
+    if (lobby.board.length === 2) {
+        const [c1, c2] = lobby.board;
+        const trumpSuit = lobby.trump?.suit;
+        let winnerId;
+
+        if (c1.suit === c2.suit) {
+            winnerId = c1.rank > c2.rank ? c1.playedBy : c2.playedBy;
+        } else if (c1.suit === trumpSuit) {
+            winnerId = c1.playedBy;
+        } else if (c2.suit === trumpSuit) {
+            winnerId = c2.playedBy;
+        } else {
+            winnerId = c1.playedBy;
+        }
+
+        const points = (c1.points || 0) + (c2.points || 0);
+        const winner = lobby.players.find(p => p.id === winnerId);
+        if (winner) winner.points += points;
+
+        lobby.lastTrickWinner = winnerId;
+        lobby.board = [];
+        lobby.currentTurn = winnerId;
+    }
+
+    lobby.players.forEach(p => {
+        io.to(p.id).emit('playCard', {
+            hand: p.hand,
+            board: lobby.board,
+            currentTurn: lobby.currentTurn,
+            lastTrickWinner: lobby.lastTrickWinner
+        });
+    });
+});
+
 
 socket.on('disconnect', () => {
     console.log('Player disconnected:', socket.id);
