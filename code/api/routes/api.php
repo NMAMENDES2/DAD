@@ -35,4 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- PARTIDAS (MATCHES - O Principal) ---
     Route::get('/matches', [MatchController::class, 'index']);
     Route::post('/matches', [MatchController::class, 'store']);
+
+    Route::get('/shop/items', [App\Http\Controllers\ShopController::class, 'index']);
+    Route::post('/shop/buy', [App\Http\Controllers\ShopController::class, 'buy']);
+    Route::post('/shop/equip', [App\Http\Controllers\ShopController::class, 'equip']);
 });
