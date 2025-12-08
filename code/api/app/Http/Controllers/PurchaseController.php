@@ -14,6 +14,17 @@ use function PHPSTORM_META\type;
 
 class PurchaseController extends Controller
 {
+
+    public function purchaseAvatar(Request $request){
+
+        $user = $request->user();
+
+        return response()->json([
+            'message' => 'Not implemented yet',
+        ], 501);
+
+    }
+
     public function purchase(PurchaseRequest $request){
 
         $validated = $request->validated();
@@ -91,8 +102,7 @@ class PurchaseController extends Controller
         }
     }
 
-    private function isInvalidReference($type, $reference, $value)
-{
+    private function isInvalidReference($type, $reference, $value){
     $error = null;
 
     switch ($type) {
