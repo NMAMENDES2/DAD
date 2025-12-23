@@ -138,7 +138,7 @@
 
 <script setup>
 import { useGameStore } from "@/stores/game"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button/"
 import { ref, computed, watch, onMounted, onUnmounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 

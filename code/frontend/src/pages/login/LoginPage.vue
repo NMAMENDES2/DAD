@@ -47,7 +47,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { Input } from '@/components/ui/input'
+import { Input } from '@/components/ui/input/'
 import { Button } from '@/components/ui/button'
 
 import { useAuthStore } from '@/stores/auth'

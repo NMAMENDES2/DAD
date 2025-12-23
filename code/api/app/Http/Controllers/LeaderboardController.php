@@ -54,7 +54,6 @@ class LeaderboardController extends Controller
                         'total_coins' => (int) $item->total_coins
                     ];
                 });
-
             return [
                 'matches_won' => $matchesWon,
                 'coins_won' => $coinsWon

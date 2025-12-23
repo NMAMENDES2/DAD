@@ -30,11 +30,6 @@ class TransactionController extends Controller
         return response()->json($transactions);
     }
 
-    // Saldo (Já tinhas este)
-    public function getBalance(Request $request){
-        return response()->json(['data' => $request->user()->coins_balance]);
-    }
-
     // --- NOVO: Criar Transação (O que faltava) ---
     public function store(Request $request)
     {

@@ -3,7 +3,8 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\LeaderboardController;
-use App\Http\Controllers\MatchController; // <--- NOVO CONTROLADOR
+use App\Http\Controllers\MatchController; 
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Http\Request;
@@ -20,11 +21,19 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::post('logout', [AuthController::class, 'logout']);
 
+    // Profile
+
+    Route::put('/profile/name', [ProfileController::class, 'updateName']);
+    Route::put('/profile/email', [ProfileController::class, 'updateEmail']);
+    Route::put('/profile/nickname', [ProfileController::class, 'updateNickname']);
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
+    Route::post('profile/avatar', [ProfileController::class, 'updateAvatar']);
+    Route::delete('/profile', [ProfileController::class, 'destroy']);
+
     // Economia
     Route::post('/purchase', [PurchaseController::class, 'purchase']);
     Route::get('/transactions', [TransactionController::class, 'getTransactions']);
     Route::post('/transactions', [TransactionController::class, 'store']);
-    Route::get('/balance', [TransactionController::class, 'getBalance']);
 
     // Leaderboard
     Route::get('/leaderboard', [LeaderboardController::class, 'getLeaderboard']);
