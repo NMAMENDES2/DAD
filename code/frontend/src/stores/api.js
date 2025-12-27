@@ -115,6 +115,15 @@ export const useAPIStore = defineStore('api', () => {
     return axios.get(`${API_BASE_URL}/balance`)
   }
 
+  const getLeaderboard = () => axios.get(`${API_BASE_URL}/leaderboard`)
+
+  const getMyStats = () => axios.get(`${API_BASE_URL}/statistics/me`)
+
+  const getGlobalStats = () => axios.get(`${API_BASE_URL}/statistics/global`)
+
+  const getMatches = () => axios.get(`${API_BASE_URL}/matches`)
+  const createMatch = (payload) => axios.post(`${API_BASE_URL}/matches`, payload)
+
   return {
     postLogin,
     postRegister,
@@ -126,6 +135,11 @@ export const useAPIStore = defineStore('api', () => {
     getBalance,
     gameQueryParameters,
     transactionQueryParameters,
-    setAuthorizationHeader
+    setAuthorizationHeader,
+    getLeaderboard,
+    getMyStats,
+    getGlobalStats,
+    getMatches,
+    createMatch
   }
 })

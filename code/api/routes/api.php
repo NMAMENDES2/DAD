@@ -7,6 +7,7 @@ use App\Http\Controllers\MatchController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\StatisticsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -48,4 +49,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/shop/items', [App\Http\Controllers\ShopController::class, 'index']);
     Route::post('/shop/buy', [App\Http\Controllers\ShopController::class, 'buy']);
     Route::post('/shop/equip', [App\Http\Controllers\ShopController::class, 'equip']);
+
+
+    Route::get('/statistics/me', [StatisticsController::class, 'getMyStats']);
+
+    Route::get('/statistics/global', [StatisticsController::class, 'getGlobalStats']);
 });

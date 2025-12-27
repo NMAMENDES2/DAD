@@ -11,6 +11,9 @@ import WebsocketsPage from '@/pages/testing/WebsocketsPage.vue'
 import TransactionsPage from '@/pages/Transactions/TransactionsPage.vue'
 import { useAuthStore } from '@/stores/auth'
 import { createRouter, createWebHistory } from 'vue-router'
+import LeaderboardPage from '@/pages/leaderboard/LeaderboardPage.vue'
+import MyStatsPage from '@/pages/statistics/MyStatsPage.vue'
+import GlobalStatisticsPage from '@/pages/statistics/GlobalStatisticsPage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -64,6 +67,24 @@ const router = createRouter({
       name: 'purchase',
       component: PurchasePage,
       meta: { requiresAuth: true}
+    },
+    {
+      path: '/leaderboard',
+      name: 'leaderboard',
+      component: LeaderboardPage,
+      meta: { requiresAuth: false }, // enunciado diz leaderboard global
+    },
+    {
+      path: '/my-stats',
+      name: 'my-stats',
+      component: MyStatsPage,
+      meta: { requiresAuth: true }, // só para utilizador autenticado
+    },
+    {
+      path: '/statistics/global',
+      name: 'global-stats',
+      component: GlobalStatisticsPage,
+      meta: { requiresAuth: false }, // é global, pode ser pública
     },
     {
       path: '/testing',
