@@ -156,7 +156,7 @@ const roomCode = ref(roomCodeParam || null)
 
 // Determine the number of cards based on variant
 const numCards = computed(() => {
-  return variant === 'Bisca de 3' ? 3 : 9
+  return variant === '3' ? 3 : 9
 })
 
 // Store mode and variant in memory when component mounts
