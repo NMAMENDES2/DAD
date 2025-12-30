@@ -310,11 +310,15 @@ export const useGameStore = defineStore('game', () => {
   }
 
   const checkGameWinner = () => {
-    if (player1.value.length === 0 && player2.value.length === 0 && remainingDeck.value.length === 0) {
+    if (
+      player1.value.length === 0 &&
+      player2.value.length === 0 &&
+      remainingDeck.value.length === 0
+    ) {
       if (player1Points.value >= 61 && player1Points.value > player2Points.value) {
         winner.value = 1
         calculateMarks()
-      } else if (player2Points.value >= 61  && player1Points.value > playerPoints.value) {
+      } else if (player2Points.value >= 61 && player2Points.value > player1Points.value) {
         winner.value = 2
         calculateMarks()
       } else if (player1Points.value === player2Points.value) {
@@ -362,6 +366,8 @@ export const useGameStore = defineStore('game', () => {
     dealer.value = null
   }
 
+
+
   return {
     cards,
     faceDownCard,
@@ -389,5 +395,6 @@ export const useGameStore = defineStore('game', () => {
     checkGameWinner,
     calculateMarks,
     resetMatch,
+    
   }
 })

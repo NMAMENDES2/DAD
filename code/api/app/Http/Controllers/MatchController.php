@@ -26,56 +26,36 @@ class MatchController extends Controller
         $validated = $request->validate([
             'type' => 'required|string',
             'status' => 'required|string',
+            'player1_user_id' => 'required|integer|exists:users,id',
+            'player2_user_id' => 'required|integer|exists:users,id',
             'player1_marks' => 'required|integer',
             'player2_marks' => 'required|integer',
-            'winner_user_id' => 'nullable|integer',
+            'player1_points' => 'required|integer',
+            'player2_points' => 'required|integer',
+            'winner_user_id' => 'nullable|integer|exists:users,id',
         ]);
 
-        $user = $request->user();
-        
-        // --- SOLUÇÃO: DEFINIR UM ID PARA O BOT ---
-        // Vamos usar o ID 1 (Admin) para representar o Bot. 
-        // Se quiseres criar um user "Bot" na BD, troca este número pelo ID dele.
-        $botId = 520; 
-        
-        // Se estiveres a jogar com a conta ID 1, usa o ID 2 para o bot para não dar conflito
-        if ($user->id == 1) {
-            $botId = 2; 
-        }
-
-        // Determinar Vencedor e Perdedor
-        $winnerIdInput = $request->input('winner_user_id');
-        
-        $finalWinnerId = null;
-        $finalLoserId = null;
-
-        if ($winnerIdInput == $user->id) {
-            // Humano Ganhou
-            $finalWinnerId = $user->id;
-            $finalLoserId = $botId;
-        } else {
-            // Bot Ganhou (Android enviou null ou outro ID)
-            $finalWinnerId = $botId;
-            $finalLoserId = $user->id;
-        }
-
-        // Inserir na tabela 'matches'
-        $matchId = DB::table('matches')->insertGetId([
+        $match = GameMatch::create([
             'type' => $validated['type'],
             'status' => $validated['status'],
-            'player1_user_id' => $user->id,
-            'player2_user_id' => $botId, // <--- AQUI ESTAVA O ERRO (agora tem ID)
-            'winner_user_id' => $finalWinnerId,
-            'loser_user_id' => $finalLoserId,
+            'player1_user_id' => $validated['player1_user_id'],
+            'player2_user_id' => $validated['player2_user_id'],
+            'winner_user_id' => $validated['winner_user_id'],
+            'loser_user_id' => $validated['winner_user_id']
+                ? ($validated['winner_user_id'] == $validated['player1_user_id']
+                    ? $validated['player2_user_id']
+                    : $validated['player1_user_id'])
+                : null,
             'player1_marks' => $validated['player1_marks'],
             'player2_marks' => $validated['player2_marks'],
-            'player1_points' => 0, 
-            'player2_points' => 0,
+            'player1_points' => $validated['player1_points'],
+            'player2_points' => $validated['player2_points'],
             'began_at' => now(),
             'ended_at' => now(),
-            'total_time' => 0
+            'total_time' => 0,
         ]);
 
-        return response()->json(['id' => $matchId, 'message' => 'Match created'], 201);
+        return response()->json($match, 201);
     }
+
 }

@@ -11,7 +11,7 @@ onMounted(async () => {
   loading.value = true
   try {
     const r = await apiStore.getMyGames()
-    games.value = r.data.data ?? r.data
+    games.value = r.data.data
   } catch (e) {
     error.value = 'Failed to load your games'
   } finally {

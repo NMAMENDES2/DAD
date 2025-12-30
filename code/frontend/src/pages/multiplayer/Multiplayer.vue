@@ -6,11 +6,13 @@ import { toast } from 'vue-sonner';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card/';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useAPIStore } from '@/stores/api';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const socket = inject('socket');
+const apiStore = useAPIStore();
 
 const mode = route.params.mode || 'game';
 const variant = route.params.variant || '3';
@@ -28,6 +30,45 @@ const lastTrickWinner = ref('');
 const remainingDeckCount = ref(0);
 const gameStarted = ref(false);
 const isReconnecting = ref(false);
+
+async function debugForceWinMatch() {
+  if (!gameStarted.value) return
+
+  const me = myPlayer.value
+  const opp = opponentPlayer.value
+  const human = authStore.user
+
+  if (!me || !opp || !human) {
+    console.warn('DEBUG match win aborted: missing me/opp/user', { me, opp, human })
+    return
+  }
+
+  const humanId = human.id
+  // ainda não tens o user_id Laravel do oponente, por isso usa um placeholder temporário
+  const oppUserId = humanId === 1 ? 2 : 1  // só para testar o endpoint
+
+  const meMarks = 4
+  const oppMarks = 0
+
+  console.log('DEBUG match win', { humanId, oppUserId, mePoints: me.points, oppPoints: opp.points })
+
+  try {
+    await apiStore.createMatch({
+      type: variant,
+      status: 'Ended',
+      player1_user_id: humanId,
+      player2_user_id: oppUserId,
+      player1_marks: meMarks,
+      player2_marks: oppMarks,
+      player1_points: me.points,
+      player2_points: opp.points,
+      winner_user_id: humanId,
+    })
+    console.log('Match saved!')
+  } catch (e) {
+    console.error('Failed to save match', e.response?.data || e.message)
+  }
+}
 
 const isMyTurn = computed(() => {
   const result = currentTurn.value === playerID.value;
@@ -47,7 +88,15 @@ const attemptReconnect = () => {
   }
 };
 
-onMounted(() => {
+onMounted(async() => {
+  if (!authStore.user) {
+    try {
+      const res = await apiStore.getAuthUser()
+      authStore.user = res.data
+    } catch (e) {
+      console.error('Failed to load auth user in multiplayer', e.response?.data || e.message)
+    }
+  }
   if (!socket) {
     toast.error('Socket connection not available');
     return;
@@ -229,6 +278,15 @@ const leaveGame = () => {
           Leave Game
         </Button>
       </div>
+    </div>
+
+    <div class="flex justify-end mt-2" v-if="gameStarted && !isReconnecting">
+      <Button
+        class="py-1 px-3 bg-purple-500 text-white text-xs"
+        @click="debugForceWinMatch"
+      >
+        DEBUG: Force Match Win
+      </Button>
     </div>
 
     <Card v-if="isReconnecting" class="bg-yellow-50 border-yellow-200">
