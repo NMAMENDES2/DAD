@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Game;
 use App\Models\User;
+use App\Models\GameMatch;
+use App\Models\CoinPurchase;
 
 class StatisticsController extends Controller
 {
@@ -32,16 +34,16 @@ class StatisticsController extends Controller
     }
 
     public function getGlobalStats()
-    {
-        return response()->json([
-            'total_players' => User::where('type', 'P')->count(),
-            'total_admins'  => User::where('type', 'A')->count(),
-            'total_games'   => Game::count(),
-            'total_matches' => 0, // por enquanto
-            'bisca3_games'  => Game::where('type', '3')->count(),
-            'bisca9_games'  => Game::where('type', '9')->count(),
-            'total_purchases' => 0,
-            'total_purchases_euros' => 0,
-        ]);
-    }
+{
+    return response()->json([
+        'total_players' => User::where('type', 'P')->count(),
+        'total_admins'  => User::where('type', 'A')->count(),
+        'total_games'   => Game::count(),
+        'total_matches' => GameMatch::count(),
+        'bisca3_games'  => Game::where('type', '3')->count(),
+        'bisca9_games'  => Game::where('type', '9')->count(),
+        'total_purchases' => CoinPurchase::count(),
+        'total_purchases_euros' => CoinPurchase::sum('euros'),
+    ]);
+}
 }

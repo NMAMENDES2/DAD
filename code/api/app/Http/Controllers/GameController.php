@@ -123,4 +123,15 @@ class GameController extends Controller
     {
         //
     }
+    public function myGames(Request $request)
+{
+    $userId = $request->user()->id;
+
+    $games = Game::where('player1_user_id', $userId)
+        ->orWhere('player2_user_id', $userId)
+        ->orderBy('began_at', 'desc')
+        ->paginate(15);
+
+    return response()->json($games);
+}
 }

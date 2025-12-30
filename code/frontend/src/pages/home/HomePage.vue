@@ -11,7 +11,7 @@
       <div class="mt-8 space-y-4">
         <!-- Botões principais -->
         <div
-          v-if="!showVariantChoice && !showStatsChoice"
+          v-if="!showVariantChoice && !showStatsChoice && !showHistoryChoice"
           class="grid gap-4"
           :class="
             isLoggedIn ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 place-items-center'
@@ -32,20 +32,31 @@
             Multiplayer
           </Button>
 
-          <!-- Leaderboard (público) -->
+          <!-- Leaderboard (apenas logado) -->
           <Button
+            v-if="isLoggedIn"
             class="w-full py-3 px-6 text-center bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
             @click="goLeaderboard"
           >
             Leaderboard
           </Button>
 
-          <!-- Estatísticas: abre escolha -->
+          <!-- Estatísticas (apenas logado) -->
           <Button
+            v-if="isLoggedIn"
             class="w-full py-3 px-6 text-center bg-orange-500 text-white rounded-lg hover:bg-orange-600"
             @click="showStatsChoice = true"
           >
             Statistics
+          </Button>
+
+          <!-- Histórico (apenas logado) -->
+          <Button
+            v-if="isLoggedIn"
+            class="w-full py-3 px-6 text-center bg-gray-700 text-white rounded-lg hover:bg-gray-800"
+            @click="showHistoryChoice = true"
+          >
+            History
           </Button>
         </div>
 
@@ -79,7 +90,6 @@
           <p class="text-sm text-gray-700">Which statistics do you want to see?</p>
           <div class="flex gap-4">
             <Button
-              v-if="isLoggedIn"
               class="py-2 px-4 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
               @click="goMyStats"
             >
@@ -95,6 +105,31 @@
           <Button
             class="mt-2 py-1 px-3 text-xs bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
             @click="showStatsChoice = false"
+          >
+            Back
+          </Button>
+        </div>
+
+        <!-- Escolha entre histórico de games ou matches -->
+        <div v-else-if="showHistoryChoice" class="flex flex-col items-center gap-4">
+          <p class="text-sm text-gray-700">Which history do you want to see?</p>
+          <div class="flex gap-4">
+            <Button
+              class="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              @click="goMyGames"
+            >
+              Games history
+            </Button>
+            <Button
+              class="py-2 px-4 bg-teal-500 text-white rounded-lg hover:bg-teal-600"
+              @click="goMyMatches"
+            >
+              Matches history
+            </Button>
+          </div>
+          <Button
+            class="mt-2 py-1 px-3 text-xs bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+            @click="showHistoryChoice = false"
           >
             Back
           </Button>
@@ -116,6 +151,7 @@ const router = useRouter()
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const showVariantChoice = ref(false)
 const showStatsChoice = ref(false)
+const showHistoryChoice = ref(false)
 
 const goMultiplayer = () => {
   router.push('/multiplayer')
@@ -141,6 +177,14 @@ const goMyStats = () => {
 
 const goGlobalStats = () => {
   router.push({ name: 'global-stats' })
+}
+
+const goMyGames = () => {
+  router.push({ name: 'my-games' })
+}
+
+const goMyMatches = () => {
+  router.push({ name: 'my-matches' })
 }
 </script>
 

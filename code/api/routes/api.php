@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::get('/games/my', [GameController::class, 'myGames']); // fora do grupo
 
 Route::middleware('auth:sanctum')->group(function () {
     
@@ -45,6 +46,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- PARTIDAS (MATCHES - O Principal) ---
     Route::get('/matches', [MatchController::class, 'index']);
     Route::post('/matches', [MatchController::class, 'store']);
+
+    Route::get('/games/my', [GameController::class, 'myGames']);
 
     Route::get('/shop/items', [App\Http\Controllers\ShopController::class, 'index']);
     Route::post('/shop/buy', [App\Http\Controllers\ShopController::class, 'buy']);

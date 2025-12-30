@@ -14,6 +14,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LeaderboardPage from '@/pages/leaderboard/LeaderboardPage.vue'
 import MyStatsPage from '@/pages/statistics/MyStatsPage.vue'
 import GlobalStatisticsPage from '@/pages/statistics/GlobalStatisticsPage.vue'
+import MyMatchesPage from '@/pages/matches/MyMatchesPage.vue'
+import MyGamesPage from '@/pages/games/MyGamesPage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -99,6 +101,18 @@ const router = createRouter({
         },
       ],
     },
+    {
+      path: '/my-matches',
+      name: 'my-matches',
+      component: MyMatchesPage,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/my-games',
+      name: 'my-games',
+      component: MyGamesPage,
+      meta: { requiresAuth: true },
+    }
   ],
 })
 
