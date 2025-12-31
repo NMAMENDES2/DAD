@@ -7,14 +7,15 @@ const io = new Server(PORT, {
 });
 
 const lobbies = {};
-const RECONNECT_TIMEOUT = 60000; 
+const RECONNECT_TIMEOUT = 60000; // 60 seconds to reconnect
+const WINNING_SCORE = 120; // Bisca winning score
 
 function getAvailableLobbies() {
     const result = Object.entries(lobbies).map(([id, lobby]) => ({
         id,
-        playerCount: lobby.players.length,
+        playerCount: lobby.players.filter(p => !p.disconnected).length,
         maxPlayers: 2,
-        isFull: lobby.players.length >= 2,
+        isFull: lobby.players.filter(p => !p.disconnected).length >= 2,
         type: lobby.type,
         variant: lobby.variant,
         creatorId: lobby.creatorId,
@@ -26,7 +27,7 @@ function getAvailableLobbies() {
             disconnected: p.disconnected || false
         }))
     }));
-    console.log('Sending lobbies:', result)
+    console.log('Sending lobbies:', result);
     return result;
 }
 
@@ -45,7 +46,11 @@ function schedulePlayerRemoval(lobbyId, nickname) {
             const playerIndex = lobby.players.indexOf(player);
             lobby.players.splice(playerIndex, 1);
             
-            if (lobby.players.length === 0) {
+            // If creator times out, dismantle lobby
+            if (player.isCreator) {
+                io.to(lobbyId).emit('lobbyDismantled', `Lobby creator ${player.nickname} failed to reconnect`);
+                delete lobbies[lobbyId];
+            } else if (lobby.players.length === 0) {
                 delete lobbies[lobbyId];
             } else {
                 io.to(lobbyId).emit('playerRemoved', {
@@ -103,6 +108,50 @@ function autoDrawCards(lobbyID) {
     console.log(`✅ Cards auto-drawn. Deck remaining: ${deck.length}`);
 }
 
+function checkGameEnd(lobby, lobbyID) {
+    // Check if any player has reached 120 points
+    const playerWith120 = lobby.players.find(p => p.points >= WINNING_SCORE);
+    
+    if (playerWith120) {
+        console.log(`🏁 Game over! ${playerWith120.nickname} reached ${playerWith120.points} points`);
+        
+        io.to(lobbyID).emit('gameEnded', {
+            winnerId: playerWith120.id,
+            players: lobby.players.map(p => ({
+                id: p.id,
+                nickname: p.nickname,
+                points: p.points
+            }))
+        });
+        
+        lobby.gameStarted = false;
+        return true;
+    }
+    
+    // Check if all hands are empty and deck is exhausted
+    const allHandsEmpty = lobby.players.every(p => p.hand.length === 0);
+    if (allHandsEmpty && lobby.remainingDeck.length === 0) {
+        console.log('🏁 Game over - all cards played!');
+        const finalWinner = lobby.players.reduce((prev, curr) => 
+            curr.points > prev.points ? curr : prev
+        );
+        
+        io.to(lobbyID).emit('gameEnded', {
+            winnerId: finalWinner.id,
+            players: lobby.players.map(p => ({
+                id: p.id,
+                nickname: p.nickname,
+                points: p.points
+            }))
+        });
+        
+        lobby.gameStarted = false;
+        return true;
+    }
+    
+    return false;
+}
+
 io.on('connection', (socket) => {
     console.log('Player connected:', socket.id);
 
@@ -116,20 +165,35 @@ io.on('connection', (socket) => {
     socket.on('joinLobby', (lobbyId, nickname, type = 'game', variant = '3') => {
         const playerID = socket.id;
 
+        // Check if player with this nickname already exists in another lobby
+        for (const [existingLobbyId, existingLobby] of Object.entries(lobbies)) {
+            const playerInLobby = existingLobby.players.find(p => p.nickname === nickname && !p.disconnected);
+            if (playerInLobby && existingLobbyId !== lobbyId) {
+                socket.emit('alreadyInLobby');
+                return;
+            }
+        }
+
         const lobby = lobbies[lobbyId];
+        
+        // Handle reconnection to existing lobby
         if (lobby) {
             const existingPlayer = lobby.players.find(p => p.nickname === nickname);
             if (existingPlayer) {
                 console.log(`🔄 Player ${nickname} reconnecting to lobby ${lobbyId}`);
                 
+                // Update player's socket ID and mark as connected
                 existingPlayer.id = playerID;
                 existingPlayer.disconnected = false;
-                socket.join(lobbyId);
+                existingPlayer.lastSeen = Date.now();
                 
+                socket.join(lobbyId);
                 socket.emit('playerID', { playerID });
                 
+                // Notify all players in lobby
                 io.to(lobbyId).emit('playerUpdate', lobby.players);
                 
+                // If game is in progress, send game state
                 if (lobby.gameStarted) {
                     socket.emit('gameStarted', {
                         lobbyId,
@@ -167,22 +231,27 @@ io.on('connection', (socket) => {
                 broadcastLobbyList();
                 return;
             }
-        }
+            
+            // Check if lobby is full (excluding disconnected players)
+            const activePlayers = lobby.players.filter(p => !p.disconnected);
+            if (activePlayers.length >= 2) {
+                socket.emit('lobbyFull');
+                return;
+            }
 
-        for (const [existingLobbyId, existingLobby] of Object.entries(lobbies)) {
-            if (existingLobbyId !== lobbyId) {
-                const playerInLobby = existingLobby.players.find(p => p.nickname === nickname);
-                if (playerInLobby) {
-                    socket.emit('alreadyInLobby');
-                    return;
-                }
+            // Check if game already started
+            if (lobby.gameStarted) {
+                socket.emit('gameInProgress');
+                return;
             }
         }
 
+        // Join or create new lobby
         socket.join(lobbyId);
         let currentLobby = lobbies[lobbyId];
 
         if (!currentLobby) {
+            // Create new lobby
             currentLobby = {
                 players: [],
                 board: [],
@@ -195,27 +264,19 @@ io.on('connection', (socket) => {
                 remainingDeck: [],
                 lastTrickWinner: null,
                 gameStarted: false
-            }
+            };
             lobbies[lobbyId] = currentLobby;
         }
 
-        if (currentLobby.players.length >= 2) {
-            socket.emit('lobbyFull');
-            return;
-        }
-
-        if (currentLobby.gameStarted) {
-            socket.emit('gameInProgress');
-            return;
-        }
-
+        // Add new player
         currentLobby.players.push({
             id: playerID,
             nickname: nickname,
             points: 0,
             hand: [],
             isCreator: currentLobby.players.length === 0,
-            disconnected: false
+            disconnected: false,
+            lastSeen: Date.now()
         });
 
         io.to(lobbyId).emit('playerUpdate', currentLobby.players);
@@ -241,29 +302,48 @@ io.on('connection', (socket) => {
         lobby.players.splice(playerIndex, 1);
         socket.leave(lobbyId);
         
-        // Always dismantle the lobby when someone leaves
-        io.to(lobbyId).emit('lobbyDismantled', `${leavingPlayer.nickname} has left the game`);
+        // If creator leaves or game was started, dismantle the lobby
+        if (leavingPlayer.isCreator || lobby.gameStarted) {
+            io.to(lobbyId).emit('lobbyDismantled', 
+                lobby.gameStarted 
+                    ? `${leavingPlayer.nickname} has left the game` 
+                    : `Lobby creator ${leavingPlayer.nickname} has left`
+            );
 
-        // Force all remaining players to leave the lobby
-        const room = io.sockets.adapter.rooms.get(lobbyId);
-        if (room) {
-            room.forEach(socketId => {
-                io.sockets.sockets.get(socketId)?.leave(lobbyId);
-            });
+            // Force all remaining players to leave the lobby
+            const room = io.sockets.adapter.rooms.get(lobbyId);
+            if (room) {
+                room.forEach(socketId => {
+                    io.sockets.sockets.get(socketId)?.leave(lobbyId);
+                });
+            }
+
+            delete lobbies[lobbyId];
+        } else {
+            // Just update player list if non-creator leaves before game starts
+            io.to(lobbyId).emit('playerUpdate', lobby.players);
+            
+            // Delete lobby if empty
+            if (lobby.players.length === 0) {
+                delete lobbies[lobbyId];
+            }
         }
-
-        // Delete the lobby
-        delete lobbies[lobbyId];
 
         callback({ success: true, message: 'Left the lobby successfully' });
         broadcastLobbyList();
     });
 
     socket.on('startGame', ({ lobbyId, variant }) => {
-
         const lobby = lobbies[lobbyId];
         if (!lobby) {
             console.error('❌ Lobby not found:', lobbyId);
+            return;
+        }
+
+        // Verify only active players
+        const activePlayers = lobby.players.filter(p => !p.disconnected);
+        if (activePlayers.length !== 2) {
+            console.error('❌ Cannot start game: need exactly 2 active players');
             return;
         }
 
@@ -312,6 +392,7 @@ io.on('connection', (socket) => {
         });
 
         console.log('✅ Game started successfully');
+        broadcastLobbyList();
     });
 
     socket.on('playCard', ({ lobbyID, playerID, cardIndex }) => {
@@ -420,6 +501,11 @@ io.on('connection', (socket) => {
                     cards: lobby.board
                 });
 
+                // Check if game should end (120 points reached)
+                if (checkGameEnd(lobby, lobbyID)) {
+                    return;
+                }
+
                 if (lobby.remainingDeck.length > 0) {
                     setTimeout(() => {
                         autoDrawCards(lobbyID);
@@ -432,23 +518,8 @@ io.on('connection', (socket) => {
 
                     console.log(`   Clearing board, ${winner.nickname} plays next`);
 
-                    const allHandsEmpty = lobby.players.every(p => p.hand.length === 0);
-                    if (allHandsEmpty && lobby.remainingDeck.length === 0) {
-                        console.log('🏁 Game over!');
-                        const finalWinner = lobby.players.reduce((prev, curr) => 
-                            curr.points > prev.points ? curr : prev
-                        );
-                        
-                        io.to(lobbyID).emit('gameEnded', {
-                            winnerId: finalWinner.id,
-                            players: lobby.players.map(p => ({
-                                id: p.id,
-                                nickname: p.nickname,
-                                points: p.points
-                            }))
-                        });
-                        
-                        lobby.gameStarted = false;
+                    // Check again after clearing board
+                    if (checkGameEnd(lobby, lobbyID)) {
                         return;
                     }
 
@@ -481,14 +552,25 @@ io.on('connection', (socket) => {
 
         for (const [lobbyId, lobby] of Object.entries(lobbies)) {
             const player = lobby.players.find(p => p.id === socket.id);
-            if (player) {
-                // Remove the disconnected player
-                const playerIndex = lobby.players.indexOf(player);
-                lobby.players.splice(playerIndex, 1);
+            if (!player) continue;
 
-                // Always dismantle the lobby when someone disconnects
-                io.to(lobbyId).emit('lobbyDismantled', `${player.nickname} has disconnected`);
+            // Mark player as disconnected instead of removing immediately
+            player.disconnected = true;
+            player.lastSeen = Date.now();
 
+            console.log(`⏳ ${player.nickname} marked disconnected in lobby ${lobbyId}`);
+
+            // Notify other players
+            io.to(lobbyId).emit('playerUpdate', lobby.players);
+
+            // If game hasn't started yet, or if creator disconnects, dismantle lobby
+            if (!lobby.gameStarted || player.isCreator) {
+                io.to(lobbyId).emit('lobbyDismantled', 
+                    player.isCreator 
+                        ? `Lobby creator ${player.nickname} has disconnected` 
+                        : `${player.nickname} has disconnected`
+                );
+                
                 // Force all remaining players to leave
                 const room = io.sockets.adapter.rooms.get(lobbyId);
                 if (room) {
@@ -496,13 +578,17 @@ io.on('connection', (socket) => {
                         io.sockets.sockets.get(socketId)?.leave(lobbyId);
                     });
                 }
-
-                // Delete the lobby
+                
                 delete lobbies[lobbyId];
-                break;
+                console.log(`❌ Lobby ${lobbyId} dismantled`);
+            } else {
+                // Game is in progress and non-creator disconnected - schedule removal
+                schedulePlayerRemoval(lobbyId, player.nickname);
             }
+            
+            break;
         }
-
+        
         broadcastLobbyList();
     });
 });

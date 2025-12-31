@@ -19,6 +19,8 @@ const availableLobbies = ref([]);
 const lobbyType = ref('');
 const lobbyVariant = ref('3');
 
+const maxPlayers = 2;
+
 
 watch(
   () => authStore.currentUser,
@@ -82,7 +84,7 @@ onMounted(() => {
 });
 
 const startGame = () => {
-  if (players.value.length === 2) {
+  if (players.value.length === maxPlayers) {
     const isHost = players.value.find(p => p.id === playerID.value && p.isCreator);
     if (!isHost) {
       toast.error('Only the host can start the game!');
