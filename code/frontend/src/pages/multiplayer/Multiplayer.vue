@@ -174,16 +174,21 @@ onMounted(async() => {
     console.log('💾 Received game data to save:', gameData);
     
     try {
+      let response;
       if (mode === 'match') {
-        await apiStore.createMatch(gameData);
+        response = await apiStore.createMatch(gameData);
         toast.success('Match saved successfully!');
       } else {
-        await apiStore.createMultiplayerGame(gameData);
+        response = await apiStore.createMultiplayerGame(gameData);
         toast.success('Game saved successfully!');
       }
+      console.log('✅ Game saved:', response.data);
     } catch (e) {
-      console.error('Failed to save game:', e.response?.data || e.message);
-      toast.error('Failed to save game results');
+      console.error('❌ Failed to save game:', e.response?.data || e.message);
+      
+      // Show specific error message if available
+      const errorMsg = e.response?.data?.message || 'Failed to save game results';
+      toast.error(errorMsg);
     }
   });
 
