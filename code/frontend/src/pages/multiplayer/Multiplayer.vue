@@ -14,6 +14,9 @@ const authStore = useAuthStore();
 const socket = inject('socket');
 const apiStore = useAPIStore();
 
+// FIXED: Move import.meta.env.DEV to script section
+const isDev = import.meta.env.DEV;
+
 const mode = route.params.mode || 'game';
 const variant = route.params.variant || '3';
 
@@ -31,48 +34,19 @@ const remainingDeckCount = ref(0);
 const gameStarted = ref(false);
 const isReconnecting = ref(false);
 
-async function debugForceWinMatch() {
-  if (!gameStarted.value) return
-
-  const me = myPlayer.value
-  const opp = opponentPlayer.value
-  const human = authStore.user
-
-  if (!me || !opp || !human) {
-    console.warn('DEBUG match win aborted: missing me/opp/user', { me, opp, human })
-    return
-  }
-
-  const humanId = human.id
-  // ainda não tens o user_id Laravel do oponente, por isso usa um placeholder temporário
-  const oppUserId = humanId === 1 ? 2 : 1  // só para testar o endpoint
-
-  const meMarks = 4
-  const oppMarks = 0
-
-  console.log('DEBUG match win', { humanId, oppUserId, mePoints: me.points, oppPoints: opp.points })
-
-  try {
-    await apiStore.createMatch({
-      type: variant,
-      status: 'Ended',
-      player1_user_id: humanId,
-      player2_user_id: oppUserId,
-      player1_marks: meMarks,
-      player2_marks: oppMarks,
-      player1_points: me.points,
-      player2_points: opp.points,
-      winner_user_id: humanId,
-    })
-    console.log('Match saved!')
-  } catch (e) {
-    console.error('Failed to save match', e.response?.data || e.message)
-  }
-}
-
 const isMyTurn = computed(() => {
-  const result = currentTurn.value === playerID.value;
-  console.log('isMyTurn computed:', { currentTurn: currentTurn.value, playerID: playerID.value, result });
+  const current = currentTurn.value;
+  const myId = playerID.value;
+  const result = current === myId;
+  
+  if (gameStarted.value) {
+    console.log('🎯 Turn check:', { 
+      currentTurn: current, 
+      myPlayerId: myId, 
+      isMyTurn: result 
+    });
+  }
+  
   return result;
 });
 
@@ -93,10 +67,15 @@ onMounted(async() => {
     try {
       const res = await apiStore.getAuthUser()
       authStore.user = res.data
+      nickname.value = authStore.user.nickname;
     } catch (e) {
-      console.error('Failed to load auth user in multiplayer', e.response?.data || e.message)
+      console.error('Failed to load auth user', e.response?.data || e.message)
+      toast.error('Authentication required');
+      router.push('/login');
+      return;
     }
   }
+
   if (!socket) {
     toast.error('Socket connection not available');
     return;
@@ -107,13 +86,18 @@ onMounted(async() => {
   socket.on('playerID', (data) => {
     playerID.value = data.playerID;
     console.log('✅ Player ID assigned:', playerID.value);
+    
+    if (authStore.user && lobbyID.value) {
+      socket.emit('authenticateUser', {
+        userId: authStore.user.id,
+        lobbyId: lobbyID.value,
+        playerId: playerID.value
+      });
+    }
   });
 
   socket.on('gameStarted', (data) => {
     console.log('🎮 Game started:', data);
-    console.log('   My playerID:', playerID.value);
-    console.log('   Current turn:', data.currentTurn);
-    console.log('   Is my turn?', data.currentTurn === playerID.value);
 
     players.value = data.players;
     trump.value = data.trump;
@@ -136,10 +120,6 @@ onMounted(async() => {
 
   socket.on('gameState', (data) => {
     console.log('📊 Game state update:', data);
-    console.log('   Board cards:', data.board.length);
-    console.log('   New current turn:', data.currentTurn);
-    console.log('   My playerID:', playerID.value);
-    console.log('   Is my turn now?', data.currentTurn === playerID.value);
 
     board.value = data.board;
     currentTurn.value = data.currentTurn;
@@ -190,6 +170,27 @@ onMounted(async() => {
     gameStarted.value = false;
   });
 
+  socket.on('saveGameData', async (gameData) => {
+    console.log('💾 Received game data to save:', gameData);
+    
+    try {
+      if (mode === 'match') {
+        await apiStore.createMatch(gameData);
+        toast.success('Match saved successfully!');
+      } else {
+        await apiStore.createMultiplayerGame(gameData);
+        toast.success('Game saved successfully!');
+      }
+    } catch (e) {
+      console.error('Failed to save game:', e.response?.data || e.message);
+      toast.error('Failed to save game results');
+    }
+  });
+
+  socket.on('cardPlayError', (data) => {
+    toast.error(data.message);
+  });
+
   socket.on('alreadyInLobby', () => {
     toast.error('This nickname is already in another lobby');
     router.push('/multiplayer');
@@ -208,6 +209,7 @@ onMounted(async() => {
 
 onUnmounted(() => {
   if (!socket) return;
+  
   socket.off('playerID');
   socket.off('gameStarted');
   socket.off('yourHand');
@@ -219,19 +221,30 @@ onUnmounted(() => {
   socket.off('playerRemoved');
   socket.off('lobbyDismantled');
   socket.off('gameEnded');
+  socket.off('saveGameData');
+  socket.off('cardPlayError');
   socket.off('alreadyInLobby');
   socket.off('lobbyFull');
   socket.off('gameInProgress');
 });
 
 const playCard = (index) => {
-  console.log('🎯 Attempting to play card:', { index, isMyTurn: isMyTurn.value, currentTurn: currentTurn.value, myID: playerID.value });
+  console.log('🎯 Attempting to play card:', { 
+    index, 
+    isMyTurn: isMyTurn.value, 
+    currentTurn: currentTurn.value, 
+    myID: playerID.value 
+  });
 
   if (!isMyTurn.value) {
     toast.error('Not your turn!');
     return;
   }
-  if (!hand.value[index]) return;
+  
+  if (!hand.value[index]) {
+    toast.error('Invalid card');
+    return;
+  }
 
   console.log('✅ Playing card:', hand.value[index]);
   socket.emit('playCard', {
@@ -245,6 +258,7 @@ const leaveGame = () => {
   if (gameStarted.value) {
     const confirmLeave = confirm('Game is in progress. Are you sure you want to leave?');
     if (!confirmLeave) return;
+    
     socket.emit('lobbyDismantle', (message) => {
       toast.info(message);
     })
@@ -280,15 +294,6 @@ const leaveGame = () => {
       </div>
     </div>
 
-    <div class="flex justify-end mt-2" v-if="gameStarted && !isReconnecting">
-      <Button
-        class="py-1 px-3 bg-purple-500 text-white text-xs"
-        @click="debugForceWinMatch"
-      >
-        DEBUG: Force Match Win
-      </Button>
-    </div>
-
     <Card v-if="isReconnecting" class="bg-yellow-50 border-yellow-200">
       <CardContent class="pt-4">
         <div class="flex items-center gap-2">
@@ -298,7 +303,8 @@ const leaveGame = () => {
       </CardContent>
     </Card>
 
-    <Card v-if="gameStarted && !isReconnecting" class="bg-muted/50">
+    <!-- FIXED: Use isDev variable instead of import.meta.env.DEV -->
+    <Card v-if="gameStarted && !isReconnecting && isDev" class="bg-muted/50">
       <CardContent class="pt-4 text-xs">
         <div class="grid grid-cols-3 gap-2">
           <div>My ID: {{ playerID.slice(-6) }}</div>
@@ -405,7 +411,8 @@ const leaveGame = () => {
               'opacity-50 cursor-not-allowed': !isMyTurn,
               'hover:border-primary border-primary/50': isMyTurn,
               'hover:scale-105': isMyTurn
-            }" @click="playCard(i)">
+            }" 
+            @click="playCard(i)">
             <img v-if="c.image" :src="c.image" class="w-24 h-32 object-contain mx-auto" />
             <p v-if="c.rank && c.suit" class="text-xs text-center mt-1">{{ c.title }}</p>
             <div v-if="c.points" class="text-xs text-center text-muted-foreground">

@@ -43,11 +43,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Jogos (Mãos Individuais - Opcional se quiseres gravar cada mão)
     Route::apiResource('games', GameController::class);
 
-    // --- PARTIDAS (MATCHES - O Principal) ---
-    Route::get('/matches', [MatchController::class, 'index']);
-    Route::post('/matches', [MatchController::class, 'store']);
+    Route::get('/games/me', [GameController::class, 'myGames']);
 
-    Route::get('/games/my', [GameController::class, 'myGames']);
+    Route::post('/multiplayer/games', [MatchController::class, 'storeGame']);
+    
+    Route::post('/matches', [MatchController::class, 'store']);
+    Route::get('/matches/me', [MatchController::class, 'myMatches']);
+    Route::get('/matches/{match}', [MatchController::class, 'show']);
 
     Route::get('/shop/items', [App\Http\Controllers\ShopController::class, 'index']);
     Route::post('/shop/buy', [App\Http\Controllers\ShopController::class, 'buy']);

@@ -123,7 +123,7 @@ export const useAPIStore = defineStore('api', () => {
 
   const getMyMatches = () => axios.get(`${API_BASE_URL}/matches`)
   const createMatch = (payload) => axios.post(`${API_BASE_URL}/matches`, payload)
-  const getMyGames = () => axios.get(`${API_BASE_URL}/games/my`)
+  const getMyGames = () => axios.get(`${API_BASE_URL}/games/me`)
   const createGame = (payload) => axios.post(`${API_BASE_URL}/games`, payload)
 
   return {

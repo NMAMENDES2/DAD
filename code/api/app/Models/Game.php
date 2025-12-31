@@ -24,4 +24,19 @@ class Game extends Model
         'ended_at',
         'total_time',
     ];
+
+    public function match()
+    {
+        return $this->belongsTo(Matches::class, 'match_id');
+    }
+
+    public function player1()
+    {
+        return $this->belongsTo(User::class, 'player1_user_id');
+    }
+
+    public function player2()
+    {
+        return $this->belongsTo(User::class, 'player2_user_id');
+    }
 }
