@@ -58,6 +58,14 @@
           >
             History
           </Button>
+
+          <Button
+            v-if="isAdmin"
+            class="w-full py-3 px-6 text-center bg-black text-white rounded-lg hover:bg-gray-900"
+            @click="router.push('/admin')"
+          >
+            Administration
+          </Button>
         </div>
 
         <!-- Escolha da variante para Single Player -->
@@ -148,6 +156,7 @@ import { useRouter } from 'vue-router'
 const authStore = useAuthStore()
 const router = useRouter()
 
+const isAdmin = computed(() => authStore.user?.type === 'A')
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const showVariantChoice = ref(false)
 const showStatsChoice = ref(false)

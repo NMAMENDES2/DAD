@@ -16,6 +16,7 @@ import MyStatsPage from '@/pages/statistics/MyStatsPage.vue'
 import GlobalStatisticsPage from '@/pages/statistics/GlobalStatisticsPage.vue'
 import MyMatchesPage from '@/pages/matches/MyMatchesPage.vue'
 import MyGamesPage from '@/pages/games/MyGamesPage.vue'
+import AdminDashboardPage from '@/pages/admin/AdminDashboardPage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -112,7 +113,12 @@ const router = createRouter({
       name: 'my-games',
       component: MyGamesPage,
       meta: { requiresAuth: true },
-    }
+    },
+    {
+    path: '/admin',
+    name: 'admin',
+    component: AdminDashboardPage,
+    },
   ],
 })
 

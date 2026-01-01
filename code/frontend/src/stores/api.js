@@ -131,6 +131,35 @@ export const useAPIStore = defineStore('api', () => {
   }
 
 
+  // Admin - Users
+const getAdminUsers = (params = {}) =>
+  axios.get(`${API_BASE_URL}/admin/users`, { params })
+
+const createAdminUser = (payload) =>
+  axios.post(`${API_BASE_URL}/admin/users`, payload)
+
+const blockUser = (id) =>
+  axios.patch(`${API_BASE_URL}/admin/users/${id}/block`)
+
+const unblockUser = (id) =>
+  axios.patch(`${API_BASE_URL}/admin/users/${id}/unblock`)
+
+const deleteUser = (id) =>
+  axios.delete(`${API_BASE_URL}/admin/users/${id}`)
+
+// Admin - Read-only data
+const getAdminTransactions = (params = {}) =>
+  axios.get(`${API_BASE_URL}/admin/transactions`, { params })
+
+const getAdminGames = (params = {}) =>
+  axios.get(`${API_BASE_URL}/admin/games`, { params })
+
+const getAdminMatches = (params = {}) =>
+  axios.get(`${API_BASE_URL}/admin/matches`, { params })
+
+const getAdminGlobalStats = () =>
+  axios.get(`${API_BASE_URL}/admin/statistics/global`)
+
   return {
     postLogin,
     postRegister,
@@ -151,5 +180,16 @@ export const useAPIStore = defineStore('api', () => {
     getMyGames,
     createGame,
     createMultiplayerGame,
+    // Admin - Users
+    getAdminUsers,
+    createAdminUser,
+    blockUser,
+    unblockUser,
+    deleteUser,
+    // Admin - Read-only data
+    getAdminTransactions,
+    getAdminGames,
+    getAdminMatches,
+    getAdminGlobalStats,
   }
 })
