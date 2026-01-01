@@ -118,16 +118,22 @@ const router = createRouter({
     path: '/admin',
     name: 'admin',
     component: AdminDashboardPage,
+    meta: { requiresAuth: true, requiresAdmin: true },
     },
   ],
 })
 
 router.beforeEach(async (to, from, next) => {
-  const authStore = useAuthStore();
+  const authStore = useAuthStore()
 
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
     return next({ name: 'login' })
   }
+
+  if (to.meta.requiresAdmin && authStore.user?.type !== 'A') {
+    return next({ name: 'Home' })
+  }
+
   next()
 })
 

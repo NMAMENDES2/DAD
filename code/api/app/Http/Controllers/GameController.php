@@ -7,13 +7,38 @@ use Illuminate\Http\Request;
 
 class GameController extends Controller
 {
+    private function ensureNotAdmin(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user && $user->type === 'A') {
+            return response()->json([
+                'message' => 'Administrators cannot play games or hold coins.',
+            ], 403);
+        }
+
+        return null;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $query = Game::query()->with(['winner']);
+        $user = $request->user();
 
+        $query = Game::query()
+            ->with(['winner']); 
+
+        // rota normal: só jogos do próprio (player1 ou player2)
+        if (!$request->is('api/admin/*')) {
+            $query->where(function ($q) use ($user) {
+                $q->where('player1_user_id', $user->id)
+                  ->orWhere('player2_user_id', $user->id);
+            });
+        }
+
+        // filtros para admin
         if ($request->has('type') && in_array($request->type, ['3', '9'])) {
             $query->where('type', $request->type);
         }
@@ -22,8 +47,16 @@ class GameController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('from')) {
+            $query->where('began_at', '>=', $request->input('from'));
+        }
+
+        if ($request->filled('to')) {
+            $query->where('began_at', '<=', $request->input('to'));
+        }
+
         // Sorting
-        $sortField = $request->input('sort_by', 'began_at');
+        $sortField     = $request->input('sort_by', 'began_at');
         $sortDirection = $request->input('sort_direction', 'desc');
 
         $allowedSortFields = [
@@ -31,25 +64,27 @@ class GameController extends Controller
             'ended_at',
             'total_time',
             'type',
-            'status'
+            'status',
         ];
 
-        if (in_array($sortField, $allowedSortFields)) {
-            $query->orderBy($sortField, $sortDirection === 'asc' ? 'asc' : 'desc');
+        if (!in_array($sortField, $allowedSortFields, true)) {
+            $sortField = 'began_at';
         }
 
+        $query->orderBy($sortField, $sortDirection === 'asc' ? 'asc' : 'desc');
+
         // Pagination
-        $perPage = $request->input('per_page', 15);
-        $games = $query->paginate($perPage);
+        $perPage = (int) $request->input('per_page', 15);
+        $games   = $query->paginate($perPage);
 
         return response()->json([
             'data' => $games->items(),
             'meta' => [
                 'current_page' => $games->currentPage(),
-                'last_page' => $games->lastPage(),
-                'per_page' => $games->perPage(),
-                'total' => $games->total()
-            ]
+                'last_page'    => $games->lastPage(),
+                'per_page'     => $games->perPage(),
+                'total'        => $games->total(),
+            ],
         ]);
     }
 
@@ -58,6 +93,12 @@ class GameController extends Controller
      */
     public function store(Request $request)
     {
+
+        if ($resp = $this->ensureNotAdmin($request)) {
+        return $resp;
+    }
+
+
         $validated = $request->validate([
             'type' => 'required|string',
             'status' => 'required|string',

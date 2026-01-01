@@ -11,8 +11,65 @@ class MatchController extends Controller
     /**
      * Store a newly created match (multiplayer)
      */
+    private function ensureNotAdmin(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user && $user->type === 'A') {
+            return response()->json([
+                'message' => 'Administrators cannot play games or hold coins.',
+            ], 403);
+        }
+
+        return null;
+    }
+
+    public function index(Request $request)
+    {
+        $user = $request->user();
+
+        $query = Matches::query()
+        ->with(['player1', 'player2']);
+
+        if (!$request->is('api/admin/*')) {
+            $query->where(function ($q) use ($user) {
+                $q->where('player1_user_id', $user->id)
+                  ->orWhere('player2_user_id', $user->id);
+            });
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->input('type'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('from')) {
+            $query->where('began_at', '>=', $request->input('from'));
+        }
+
+        if ($request->filled('to')) {
+            $query->where('began_at', '<=', $request->input('to'));
+        }
+
+        $sortBy = $request->input('sort_by', 'began_at');
+        $direction = $request->input('sort_direction', 'desc');
+
+        $matches = $query
+            ->orderBy($sortBy, $direction)
+            ->paginate($request->input('per_page', 20));
+
+        return response()->json($matches);
+    }
     public function store(Request $request)
     {
+
+        if ($resp = $this->ensureNotAdmin($request)) {
+            return $resp;
+        }
+
         $validated = $request->validate([
             'type' => 'required|in:3,9',
             'status' => 'required|in:Pending,Playing,Ended,Interrupted',
@@ -50,6 +107,11 @@ class MatchController extends Controller
      */
     public function storeGame(Request $request)
     {
+
+        if ($resp = $this->ensureNotAdmin($request)) {
+            return $resp;
+        }
+
         $validated = $request->validate([
             'type' => 'required|in:3,9',
             'status' => 'required|in:Pending,Playing,Ended,Interrupted',

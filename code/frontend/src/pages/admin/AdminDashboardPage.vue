@@ -1,85 +1,49 @@
 <script setup>
 import { ref } from 'vue'
-import AdminUsersPage from './AdminUsersPage.vue'
+import AdminUsersPage from '@/pages/admin/AdminUsersPage.vue'
+import AdminGamesPage from '@/pages/admin/AdminGamesPage.vue'
+import AdminTransactionsPage from '@/pages/admin/AdminTransactionsPage.vue'
 
-// importa usando caminhos absolutos (mesmo padrão que usas no resto do projeto)
-import GlobalStatisticsPage from '@/pages/statistics/GlobalStatisticsPage.vue'
-import MyGamesPage from '@/pages/games/MyGamesPage.vue'
-import MyMatchesPage from '@/pages/matches/MyMatchesPage.vue'
-
-const tab = ref('users')
+const currentTab = ref('users')
 </script>
 
 <template>
-  <section class="max-w-6xl mx-auto mt-10">
-    <h1 class="text-2xl font-bold mb-4">Administration</h1>
+  <div class="max-w-6xl mx-auto mt-8 space-y-6">
+    <header>
+      <h1 class="text-2xl font-bold">Administration</h1>
+      <p class="text-sm text-gray-500">
+        Manage users, games, transactions and platform statistics.
+      </p>
+    </header>
 
-    <nav class="flex gap-2 mb-6 text-sm">
+    <nav class="flex gap-2">
       <button
-        class="px-3 py-1 rounded border"
-        :class="tab === 'users' ? 'bg-gray-900 text-white' : 'bg-white'"
-        @click="tab = 'users'"
+        class="px-3 py-1 border rounded text-sm"
+        :class="currentTab === 'users' ? 'bg-gray-800 text-white' : 'bg-white'"
+        @click="currentTab = 'users'"
       >
         Users
       </button>
       <button
-        class="px-3 py-1 rounded border"
-        :class="tab === 'transactions' ? 'bg-gray-900 text-white' : 'bg-white'"
-        @click="tab = 'transactions'"
+        class="px-3 py-1 border rounded text-sm"
+        :class="currentTab === 'games' ? 'bg-gray-800 text-white' : 'bg-white'"
+        @click="currentTab = 'games'"
       >
-        Transactions
+        Games & Matches
       </button>
       <button
-        class="px-3 py-1 rounded border"
-        :class="tab === 'games' ? 'bg-gray-900 text-white' : 'bg-white'"
-        @click="tab = 'games'"
+        class="px-3 py-1 border rounded text-sm"
+        :class="currentTab === 'transactions' ? 'bg-gray-800 text-white' : 'bg-white'"
+        @click="currentTab = 'transactions'"
       >
-        Games
-      </button>
-      <button
-        class="px-3 py-1 rounded border"
-        :class="tab === 'matches' ? 'bg-gray-900 text-white' : 'bg-white'"
-        @click="tab = 'matches'"
-      >
-        Matches
-      </button>
-      <button
-        class="px-3 py-1 rounded border"
-        :class="tab === 'stats' ? 'bg-gray-900 text-white' : 'bg-white'"
-        @click="tab = 'stats'"
-      >
-        Stats
+        Transactions & Stats
       </button>
     </nav>
 
-    <div v-if="tab === 'users'">
-      <AdminUsersPage />
-    </div>
-
-    <div v-else-if="tab === 'transactions'">
-      <!-- Reutiliza a tua página de transações mas ligada a getAdminTransactions -->
-      <p class="text-sm text-gray-500">
-        TODO: build admin transactions view (read-only).
-      </p>
-    </div>
-
-    <div v-else-if="tab === 'games'">
-      <!-- Podes criar uma tabela semelhante às tuas páginas atuais mas com getAdminGames -->
-      <p class="text-sm text-gray-500">
-        TODO: build admin games view (read-only).
-      </p>
-    </div>
-
-    <div v-else-if="tab === 'matches'">
-      <!-- Podes criar uma tabela semelhante às tuas páginas atuais mas com getAdminMatches -->
-      <p class="text-sm text-gray-500">
-        TODO: build admin matches view (read-only).
-      </p>
-    </div>
-
-    <div v-else-if="tab === 'stats'">
-      <!-- Reutiliza GlobalStatisticsPage como leitura global -->
-      <GlobalStatisticsPage />
-    </div>
-  </section>
+    <main>
+      <AdminUsersPage v-if="currentTab === 'users'" />
+      <AdminGamesPage v-else-if="currentTab === 'games'" />
+      <AdminTransactionsPage v-else />
+    </main>
+  </div>
 </template>

@@ -3,42 +3,94 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\CoinTransaction; 
+use App\Models\CoinTransaction;
 
 class TransactionController extends Controller
 {
-    // Listar Transações (Já tinhas este)
+    /**
+     * Impede administradores de mexerem em coins (criar transações).
+     */
+    private function ensureNotAdmin(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user && $user->type === 'A') {
+            return response()->json([
+                'message' => 'Administrators cannot play games or hold coins.',
+            ], 403);
+        }
+
+        return null;
+    }
+
+    
     public function getTransactions(Request $request)
     {
         $user = $request->user();
-        $query = $user->coinTransactions()->with('type');
 
-        // Ordenação
-        $sortBy = $request->input('sort_by', 'transaction_datetime');
-        $sortDirection = $request->input('sort_direction', 'desc');
-        
-        // Verifica se a coluna de ordenação existe para evitar erros de SQL
-        $allowedSorts = ['transaction_datetime', 'coins', 'id'];
-        if(in_array($sortBy, $allowedSorts)) {
-            $query->orderBy($sortBy, $sortDirection);
-        } else {
-            $query->orderBy('transaction_datetime', 'desc');
+        // base query
+        $query = CoinTransaction::query()
+            ->with(relations: ['user', 'type', 'game', 'match']); 
+
+        // se NÃO for rota admin, mostra só as transações do próprio
+        if (!$request->is('api/admin/*')) {
+            $query->where('user_id', $user->id);
         }
 
-        $transactions = $query->paginate((int)$request->input('per_page', 20));
+        // filtros extra apenas úteis para admin
+        if ($request->is('api/admin/*')) {
+
+            if ($request->filled('user_id')) {
+                $query->where('user_id', $request->input('user_id'));
+            }
+        }
+
+        // filtro por tipo (nome do tipo)
+        if ($request->filled('type')) {
+            $query->whereHas('type', function ($q) use ($request) {
+                $q->where('name', $request->input('type'));
+            });
+        }
+
+        if ($request->filled('from')) {
+            $query->where('transaction_datetime', '>=', $request->input('from'));
+        }
+
+        if ($request->filled('to')) {
+            $query->where('transaction_datetime', '<=', $request->input('to'));
+        }
+
+        // ordenação segura
+        $sortBy        = $request->input('sort_by', 'transaction_datetime');
+        $sortDirection = $request->input('sort_direction', 'desc');
+        $allowedSorts  = ['transaction_datetime', 'coins', 'id'];
+
+        if (!in_array($sortBy, $allowedSorts, true)) {
+            $sortBy = 'transaction_datetime';
+        }
+
+        $transactions = $query
+            ->orderBy($sortBy, $sortDirection === 'asc' ? 'asc' : 'desc')
+            ->paginate((int) $request->input('per_page', 20));
 
         return response()->json($transactions);
     }
 
-    // --- NOVO: Criar Transação (O que faltava) ---
+    /**
+     * Criar uma transação de coins (não para admins).
+     */
     public function store(Request $request)
     {
+        if ($resp = $this->ensureNotAdmin($request)) {
+            return $resp;
+        }
+
         $validated = $request->validate([
             'coin_transaction_type_id' => 'required|integer',
-            'coins' => 'required|integer',
+            'coins'                    => 'required|integer',
         ]);
 
-        $user = $request->user();
+        $user   = $request->user();
         $amount = (int) $validated['coins'];
 
         // Verificar saldo se for débito
@@ -46,20 +98,21 @@ class TransactionController extends Controller
             return response()->json(['message' => 'Saldo insuficiente'], 400);
         }
 
-        // Atualizar Saldo
+        // Atualizar saldo
         $user->coins_balance += $amount;
         $user->save();
 
-        // Criar Registo
-        // Usamos o modelo diretamente para evitar erros se a relação no User não estiver definida
+        // Criar registo
         $transaction = CoinTransaction::create([
-            'user_id' => $user->id,
-            'coin_transaction_type_id' => $validated['coin_transaction_type_id'],
-            'coins' => $amount,
-            'transaction_datetime' => now(),
-            // 'game_id' => null, // Podes adicionar se enviares do Android
+            'user_id'                   => $user->id,
+            'coin_transaction_type_id'  => $validated['coin_transaction_type_id'],
+            'coins'                     => $amount,
+            'transaction_datetime'      => now(),
         ]);
 
-        return response()->json($user); // Retorna o user atualizado
+        return response()->json([
+            'user'        => $user,
+            'transaction' => $transaction,
+        ]);
     }
 }
