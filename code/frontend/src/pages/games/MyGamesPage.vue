@@ -3,21 +3,29 @@ import { ref, onMounted } from 'vue'
 import { useAPIStore } from '@/stores/api'
 
 const apiStore = useAPIStore()
+
 const games = ref([])
+const meta = ref(null)
 const loading = ref(false)
 const error = ref(null)
 
-onMounted(async () => {
+const loadGames = async () => {
   loading.value = true
+  error.value = null
   try {
     const r = await apiStore.getMyGames()
-    games.value = r.data.data
+    // /games/me devolve { data: [...], meta: { ... } }
+    games.value = r.data.data ?? r.data
+    meta.value = r.data.meta ?? null
   } catch (e) {
+    console.error('Failed to load my games', e.response?.data || e.message)
     error.value = 'Failed to load your games'
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadGames)
 </script>
 
 <template>

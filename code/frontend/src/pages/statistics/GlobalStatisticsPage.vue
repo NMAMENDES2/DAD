@@ -19,17 +19,22 @@ const globalStats = ref(null)
 const loading = ref(false)
 const error = ref(null)
 
-onMounted(async () => {
+const loadGlobalStats = async () => {
   loading.value = true
+  error.value = null
   try {
     const r = await apiStore.getGlobalStats()
+    // /statistics/global -> objeto simples com os campos
     globalStats.value = r.data
   } catch (e) {
+    console.error('Failed to load global statistics', e.response?.data || e.message)
     error.value = 'Failed to load global statistics'
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadGlobalStats)
 
 const chartData = computed(() => {
   if (!globalStats.value) return null

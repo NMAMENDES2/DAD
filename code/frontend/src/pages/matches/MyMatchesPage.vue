@@ -4,20 +4,34 @@ import { useAPIStore } from '@/stores/api'
 
 const apiStore = useAPIStore()
 const matches = ref([])
+const meta = ref(null)
 const loading = ref(false)
 const error = ref(null)
 
-onMounted(async () => {
+const loadMatches = async () => {
   loading.value = true
+  error.value = null
   try {
     const r = await apiStore.getMyMatches()
-    matches.value = r.data.data ?? r.data // paginate() devolve .data
+    matches.value = r.data.data ?? r.data
+    meta.value = r.data.meta ?? null
   } catch (e) {
+    console.error('Failed to load my matches', e.response?.data || e.message)
     error.value = 'Failed to load your matches'
   } finally {
     loading.value = false
   }
-})
+}
+
+const formatDate = (value) => {
+  if (!value) return ''
+  const d = new Date(value)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ` +
+         `${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+onMounted(loadMatches)
 </script>
 
 <template>
@@ -42,7 +56,7 @@ onMounted(async () => {
           :key="m.id"
           class="border-b hover:bg-gray-50"
         >
-          <td class="p-2">{{ m.began_at }}</td>
+          <td class="p-2">{{ formatDate(m.began_at) }}</td>
           <td class="p-2">
             Bisca de {{ m.type === '3' ? '3' : '9' }}
           </td>
