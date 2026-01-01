@@ -18,6 +18,7 @@ const players = ref([]);
 const availableLobbies = ref([]);
 const lobbyType = ref('');
 const lobbyVariant = ref('3');
+const matchStake = ref(3);
 
 const maxPlayers = 2;
 
@@ -130,14 +131,25 @@ const startGame = () => {
     return;
   }
   
+  // Validate stake for matches
+  if (lobbyType.value === 'match') {
+    const stake = parseInt(matchStake.value);
+    if (isNaN(stake) || stake < 3 || stake > 100) {
+      toast.error('Stake must be between 3 and 100 coins');
+      return;
+    }
+  }
+  
   console.log('🎯 Host starting game with:', {
     lobbyId: lobbyID.value,
-    variant: lobbyVariant.value
+    variant: lobbyVariant.value,
+    stake: lobbyType.value === 'match' ? matchStake.value : undefined
   });
   
   socket.emit('startGame', {
     lobbyId: lobbyID.value, 
-    variant: lobbyVariant.value
+    variant: lobbyVariant.value,
+    stake: lobbyType.value === 'match' ? parseInt(matchStake.value) : undefined
   });
 }
 
@@ -331,8 +343,23 @@ const refreshLobbies = () => {
                 </Button>
               </div>
 
+              <div v-if="lobbyType === 'match'" class="space-y-2">
+                <label class="text-sm font-medium">Match Stake (coins)</label>
+                <input 
+                  v-model.number="matchStake" 
+                  type="number" 
+                  min="3" 
+                  max="100" 
+                  class="w-full px-3 py-2 border rounded-md"
+                  placeholder="3-100"
+                />
+                <p class="text-xs text-muted-foreground">
+                  Minimum: 3 coins. Each player will pay this stake. Winner gets (stake × 2) - 1 coin.
+                </p>
+              </div>
+
               <Button @click="startGame" class="w-full mt-4" size="lg" :disabled="!lobbyVariant">
-                Start Game
+                Start {{ lobbyType === 'match' ? 'Match' : 'Game' }}
               </Button>
             </div>
             

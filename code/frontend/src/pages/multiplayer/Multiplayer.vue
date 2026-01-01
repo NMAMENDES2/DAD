@@ -166,7 +166,21 @@ onMounted(async() => {
 
   socket.on('gameEnded', (data) => {
     const winnerPlayer = getPlayer(data.winnerId);
-    toast.success(`Game over! Winner: ${winnerPlayer?.nickname || 'Unknown'}`);
+    if (data.isMatchGame) {
+      if (data.isDraw) {
+        toast.info('Game ended in a draw - no marks awarded');
+      } else {
+        toast.success(`Game over! Winner: ${winnerPlayer?.nickname || 'Unknown'} (+${data.players.find(p => p.id === data.winnerId)?.marks || 0} marks)`);
+      }
+    } else {
+      toast.success(`Game over! Winner: ${winnerPlayer?.nickname || 'Unknown'}`);
+      gameStarted.value = false;
+    }
+  });
+
+  socket.on('matchEnded', (data) => {
+    const winnerPlayer = getPlayer(data.winnerId);
+    toast.success(`🏆 Match over! Winner: ${winnerPlayer?.nickname || 'Unknown'}`);
     gameStarted.value = false;
   });
 
@@ -175,9 +189,10 @@ onMounted(async() => {
     
     try {
       let response;
-      if (mode === 'match') {
-        response = await apiStore.createMatch(gameData);
-        toast.success('Match saved successfully!');
+      if (gameData.isMatchGame || mode === 'match') {
+        // Save individual game within match
+        response = await apiStore.createMultiplayerGame(gameData);
+        toast.success('Game saved successfully!');
       } else {
         response = await apiStore.createMultiplayerGame(gameData);
         toast.success('Game saved successfully!');
@@ -188,6 +203,22 @@ onMounted(async() => {
       
       // Show specific error message if available
       const errorMsg = e.response?.data?.message || 'Failed to save game results';
+      toast.error(errorMsg);
+    }
+  });
+
+  socket.on('saveMatchData', async (matchData) => {
+    console.log('💾 Received match data to save:', matchData);
+    
+    try {
+      const response = await apiStore.createMatch(matchData);
+      toast.success('Match saved successfully!');
+      console.log('✅ Match saved:', response.data);
+    } catch (e) {
+      console.error('❌ Failed to save match:', e.response?.data || e.message);
+      
+      // Show specific error message if available
+      const errorMsg = e.response?.data?.message || 'Failed to save match results';
       toast.error(errorMsg);
     }
   });
@@ -340,6 +371,28 @@ const leaveGame = () => {
           <div class="text-right">
             <p class="text-sm text-muted-foreground">Deck Remaining</p>
             <p class="text-lg font-semibold">{{ remainingDeckCount }} cards</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Match Info (if match mode) -->
+    <Card v-if="gameStarted && mode === 'match' && !isReconnecting" class="bg-blue-50 border-blue-200">
+      <CardContent class="pt-4">
+        <div class="flex justify-between items-center">
+          <div class="text-center flex-1">
+            <p class="text-sm text-muted-foreground">{{ getPlayer(playerID)?.nickname || 'You' }}</p>
+            <p class="text-2xl font-bold">{{ getPlayer(playerID)?.marks || 0 }} marks</p>
+            <p class="text-xs text-muted-foreground">{{ getPlayer(playerID)?.totalMatchPoints || 0 }} total points</p>
+          </div>
+          <div class="text-center">
+            <p class="text-sm font-semibold">VS</p>
+            <p class="text-xs text-muted-foreground">First to 4 wins</p>
+          </div>
+          <div class="text-center flex-1">
+            <p class="text-sm text-muted-foreground">{{ opponentPlayer?.nickname || 'Opponent' }}</p>
+            <p class="text-2xl font-bold">{{ opponentPlayer?.marks || 0 }} marks</p>
+            <p class="text-xs text-muted-foreground">{{ opponentPlayer?.totalMatchPoints || 0 }} total points</p>
           </div>
         </div>
       </CardContent>
