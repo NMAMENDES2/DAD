@@ -36,8 +36,8 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request)
     {
-        error_log('Register method reached');
-        error_log('Request Data: ' . print_r($request->all(), true));
+
+        error_log("Registering user: " . $request->nickname);
 
         $user = User::create([
             'name' => $request->name,
