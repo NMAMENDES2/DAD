@@ -11,38 +11,35 @@ const loading = ref(false)
 
 // Filters & Sorting
 const selectedType = ref('')
-const sortField = ref('began_at')
-const sortDirection = ref('desc')
 
 // Fetch transactions
 const fetchData = async (resetPagination = false) => {
     loading.value = true
 
-    apiStore.transactionQueryParameters.filters = {
-        type: selectedType.value,
-        sort_by: sortField.value,
-        sort_direction: sortDirection.value,
-    }
+    apiStore.transactionQueryParameters.filters.type = selectedType.value
 
     const response = await apiStore.getUserTransaction(resetPagination)
     transactions.value = response.data.data ?? []
-    loading.value = false
-    console.log(transactions.value)
-}
 
+    loading.value = false
+}
 const handleFiltersChange = async () => {
     await fetchData(true)
 }
 
 // click sort column
 const toggleSort = (field) => {
-    if (sortField.value === field) {
-        sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
-    } else {
-        sortField.value = field
-        sortDirection.value = 'desc'
-    }
-    handleFiltersChange()
+  const qp = apiStore.transactionQueryParameters
+
+  if (qp.filters.sort_by === field) {
+    qp.filters.sort_direction =
+      qp.filters.sort_direction === 'asc' ? 'desc' : 'asc'
+  } else {
+    qp.filters.sort_by = field
+    qp.filters.sort_direction = 'desc'
+  }
+
+  fetchData()
 }
 
 const formatDate = (date) => {
@@ -79,14 +76,14 @@ onMounted(async () => {
                             <ArrowUpDown class="inline w-4 h-4" />
                         </th>
 
-                        <th class="p-2 border cursor-pointer" @click="toggleSort('amount')">
+                        <th class="p-2 border cursor-pointer" @click="toggleSort('coins')">
                             Amount
                             <ArrowUpDown class="inline w-4 h-4" />
                         </th>
 
                         <th class="p-2 border">Type</th>
 
-                        <th class="p-2 border cursor-pointer" @click="toggleSort('created_at')">
+                        <th class="p-2 border cursor-pointer" @click="toggleSort('transaction_datetime')">
                             Created
                             <ArrowUpDown class="inline w-4 h-4" />
                         </th>
@@ -96,7 +93,7 @@ onMounted(async () => {
                 <tbody class="text-center align-middle">
                     <tr v-for="t in transactions" :key="t.id">
                         <td class="border p-2">{{ t.id }}</td>
-                        <td class="border p-2">{{ t.coins }}€</td>
+                        <td class="border p-2">{{ t.coins }} coins</td>
                         <td class="border p-2">{{ t.type?.name || 'N/A' }}</td>
                         <td class="border p-2">{{ formatDate(t.transaction_datetime) }}</td>
                     </tr>

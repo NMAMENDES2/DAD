@@ -47,9 +47,7 @@ class TransactionController extends Controller
 
         // filtro por tipo (nome do tipo)
         if ($request->filled('type')) {
-            $query->whereHas('type', function ($q) use ($request) {
-                $q->where('name', $request->input('type'));
-            });
+               $query->where('coin_transaction_type_id', $request->input('type'));
         }
 
         if ($request->filled('from')) {
