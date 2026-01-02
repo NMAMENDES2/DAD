@@ -24,7 +24,22 @@ class CoinTransaction extends Model
     ];
 
     public function type()
-{
-    return $this->belongsTo(CoinTransactionType::class, 'coin_transaction_type_id');
-}
+    {
+        return $this->belongsTo(CoinTransactionType::class, 'coin_transaction_type_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+     public function game()
+    {
+        return $this->belongsTo(Game::class, 'game_id');
+    }
+
+     public function match()
+    {
+        return $this->belongsTo(Matches::class, 'match_id');
+    }
 }

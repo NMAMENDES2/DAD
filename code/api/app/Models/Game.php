@@ -39,4 +39,14 @@ class Game extends Model
     {
         return $this->belongsTo(User::class, 'player2_user_id');
     }
+
+    public function winner()
+    {
+        return $this->belongsTo(User::class, 'winner_user_id');
+    }
+    
+    public function loser()
+    {
+        return $this->belongsTo(User::class, 'loser_user_id');
+    }
 }
