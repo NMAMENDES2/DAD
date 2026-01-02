@@ -5,6 +5,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Matches extends Model
 {
+
+    public $timestamps = false;
+
     protected $fillable = [
         'type',
         'player1_user_id',

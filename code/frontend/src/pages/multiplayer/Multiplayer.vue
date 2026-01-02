@@ -24,6 +24,9 @@ const lobbyID = ref(route.query.lobbyId || '');
 const playerID = ref('');
 const nickname = ref(authStore.currentUser?.nickname || '');
 
+const moveTimeLeft = ref(20);
+const moveTimerInterval = ref(null);
+
 const players = ref([]);
 const hand = ref([]);
 const board = ref([]);
@@ -33,6 +36,15 @@ const lastTrickWinner = ref('');
 const remainingDeckCount = ref(0);
 const gameStarted = ref(false);
 const isReconnecting = ref(false);
+
+const resignGame = () => {
+  if (!confirm('Are you sure you want to resign? This will forfeit the entire match.')) return;
+  
+  socket.emit('resignGame', {
+    lobbyId: lobbyID.value,
+    playerId: playerID.value
+  });
+};
 
 const isMyTurn = computed(() => {
   const current = currentTurn.value;
@@ -83,6 +95,10 @@ onMounted(async() => {
 
   attemptReconnect();
 
+  socket.on('playerResigned', (data) => {
+    toast.error(`${data.resignedNickname} ${data.reason === 'timeout' ? 'ran out of time' : 'resigned'}!`);
+  });
+
   socket.on('playerID', (data) => {
     playerID.value = data.playerID;
     console.log('✅ Player ID assigned:', playerID.value);
@@ -120,6 +136,20 @@ onMounted(async() => {
 
   socket.on('gameState', (data) => {
     console.log('📊 Game state update:', data);
+
+    if (moveTimerInterval.value) {
+      clearInterval(moveTimerInterval.value);
+    }
+
+    if (data.currentTurn === playerID.value) {
+    moveTimeLeft.value = 20;
+    moveTimerInterval.value = setInterval(() => {
+      moveTimeLeft.value--;
+      if (moveTimeLeft.value <= 0) {
+        clearInterval(moveTimerInterval.value);
+      }
+    }, 1000);
+  }
 
     board.value = data.board;
     currentTurn.value = data.currentTurn;
@@ -176,12 +206,16 @@ onMounted(async() => {
       toast.success(`Game over! Winner: ${winnerPlayer?.nickname || 'Unknown'}`);
       gameStarted.value = false;
     }
+
+    router.push('/multiplayer');
   });
 
   socket.on('matchEnded', (data) => {
     const winnerPlayer = getPlayer(data.winnerId);
     toast.success(`🏆 Match over! Winner: ${winnerPlayer?.nickname || 'Unknown'}`);
     gameStarted.value = false;
+
+    router.push('/multiplayer');
   });
 
   socket.on('saveGameData', async (gameData) => {
@@ -262,6 +296,11 @@ onUnmounted(() => {
   socket.off('alreadyInLobby');
   socket.off('lobbyFull');
   socket.off('gameInProgress');
+
+  if (moveTimerInterval.value) {
+    clearInterval(moveTimerInterval.value);
+  }
+  socket.off('playerResigned');
 });
 
 const playCard = (index) => {
@@ -290,29 +329,6 @@ const playCard = (index) => {
   });
 };
 
-const leaveGame = () => {
-  if (gameStarted.value) {
-    const confirmLeave = confirm('Game is in progress. Are you sure you want to leave?');
-    if (!confirmLeave) return;
-    
-    socket.emit('lobbyDismantle', (message) => {
-      toast.info(message);
-    })
-  }
-
-  if (lobbyID.value && playerID.value) {
-    socket.emit('leaveLobby', lobbyID.value, playerID.value, (response) => {
-      if (response.success) {
-        router.push('/multiplayer');
-      } else {
-        toast.error(response.message);
-        router.push('/multiplayer');
-      }
-    });
-  } else {
-    router.push('/multiplayer');
-  }
-};
 </script>
 
 <template>
@@ -324,8 +340,8 @@ const leaveGame = () => {
       </h2>
       <div class="flex gap-2 items-center">
         <Badge v-if="playerID" variant="secondary" class="text-xs">ID: {{ playerID.slice(-4) }}</Badge>
-        <Button @click="leaveGame" variant="outline">
-          Leave Game
+        <Button v-if="gameStarted" @click="resignGame" variant="destructive">
+          Resign
         </Button>
       </div>
     </div>
@@ -410,6 +426,10 @@ const leaveGame = () => {
           <p class="text-sm text-muted-foreground">
             {{ hand.length }} cards in hand
             <Badge v-if="isMyTurn" variant="default" class="ml-2">🎯 Your Turn</Badge>
+            <Badge v-if="isMyTurn && moveTimeLeft > 0" :variant="moveTimeLeft <= 5 ? 'destructive' : 'default'"
+              class="ml-2">
+              ⏱️ {{ moveTimeLeft }}s
+            </Badge>
           </p>
         </CardContent>
       </Card>

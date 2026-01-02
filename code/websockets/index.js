@@ -8,6 +8,7 @@ const io = new Server(PORT, {
 
 const lobbies = {};
 const RECONNECT_TIMEOUT = 60000; // 60 seconds
+const MOVE_TIMEOUT = 20000; 
 const WINNING_SCORE = 120;
 const MATCH_WINNING_MARKS = 4;
 
@@ -23,6 +24,105 @@ function calculateMarks(points) {
         return 1; // Risca
     }
     return 0; // Less than 61 = loss or draw
+}
+
+function startMoveTimer(lobbyID, playerID) {
+    const lobby = lobbies[lobbyID];
+    if (!lobby || !lobby.gameStarted) return;
+
+    clearMoveTimer(lobbyID);
+
+    console.log(`⏱️ START TIMER for ${playerID.slice(-4)} in lobby ${lobbyID}`);
+
+    const timer = setTimeout(() => {
+        console.log(`⏰ TIMEOUT for ${playerID.slice(-4)}`);
+        handleResignation(lobbyID, playerID, 'timeout');
+    }, MOVE_TIMEOUT);
+
+    lobby.moveTimers.set(playerID, timer);
+}
+
+function clearMoveTimer(lobbyID) {
+    const lobby = lobbies[lobbyID];
+    if (!lobby) return;
+
+    for (const timer of lobby.moveTimers.values()) {
+        clearTimeout(timer);
+    }
+    lobby.moveTimers.clear();
+}
+
+function handleResignation(lobbyID, resigningPlayerID, reason = 'resignation') {
+    const lobby = lobbies[lobbyID];
+    if (!lobby || !lobby.gameStarted) return;
+    
+    clearMoveTimer(lobbyID);
+    
+    const resigningPlayer = lobby.players.find(p => p.id === resigningPlayerID);
+    const opponent = lobby.players.find(p => p.id !== resigningPlayerID);
+    
+    if (!resigningPlayer || !opponent) return;
+    
+    // Award all remaining cards to opponent
+    const allRemainingCards = [
+        ...resigningPlayer.hand,
+        ...opponent.hand,
+        ...lobby.remainingDeck
+    ];
+    
+    const totalPoints = allRemainingCards.reduce((sum, card) => sum + (card.points || 0), 0);
+    opponent.points += totalPoints;
+    
+    console.log(`🏳️ ${resigningPlayer.nickname} ${reason === 'timeout' ? 'timed out' : 'resigned'}. ${opponent.nickname} awarded ${totalPoints} points`);
+    
+    io.to(lobbyID).emit('playerResigned', {
+        resignedPlayerId: resigningPlayerID,
+        resignedNickname: resigningPlayer.nickname,
+        winnerId: opponent.id,
+        winnerNickname: opponent.nickname,
+        pointsAwarded: totalPoints,
+        reason
+    });
+    
+    // End game/match immediately
+    if (lobby.type === 'match') {
+        // Forfeit entire match
+        opponent.marks = MATCH_WINNING_MARKS;
+        
+        if (lobby.players.every(p => p.userId)) {
+            saveMatchToBackend(lobby, lobbyID);
+        }
+        
+        io.to(lobbyID).emit('matchEnded', {
+            winnerId: opponent.id,
+            forfeited: true,
+            players: lobby.players.map(p => ({
+                id: p.id,
+                nickname: p.nickname,
+                points: p.points,
+                marks: p.marks || 0
+            }))
+        });
+        
+        lobby.gameStarted = false;
+        lobby.matchEnded = true;
+    } else {
+        if (lobby.players.every(p => p.userId)) {
+            saveGameToBackend(lobby, lobbyID, false);
+        }
+        
+        io.to(lobbyID).emit('gameEnded', {
+            winnerId: opponent.id,
+            forfeited: true,
+            players: lobby.players.map(p => ({
+                id: p.id,
+                nickname: p.nickname,
+                points: p.points
+            }))
+        });
+        
+        lobby.gameStarted = false;
+    }
 }
 
 // Check if match should end (someone reached 4 marks)
@@ -437,6 +537,8 @@ function startNextGameInMatch(lobby, lobbyID) {
     lobby.players.forEach(player => {
         io.to(player.id).emit('yourHand', { hand: hands[player.id] });
     });
+
+    startMoveTimer(lobbyID, lobby.players[0].id); 
     
     console.log('✅ Next game started in match');
 }
@@ -449,6 +551,11 @@ io.on('connection', (socket) => {
 
     socket.on('getLobbies', () => {
         socket.emit('lobbyList', getAvailableLobbies());
+    });
+
+    socket.on('resignGame', ({ lobbyId, playerId }) => {
+        console.log(`🏳️ ${playerId.slice(-4)} resigned`);
+        handleResignation(lobbyId, playerId, 'resignation');
     });
 
     // FIXED: Proper authenticateUser handler
@@ -557,7 +664,8 @@ io.on('connection', (socket) => {
                 gameStarted: false,
                 matchId: null,
                 stake: type === 'match' ? 3 : null, // Default stake for matches
-                matchEnded: false
+                matchEnded: false,
+                moveTimers: new Map()
             };
             lobbies[lobbyId] = currentLobby;
         }
@@ -693,6 +801,8 @@ io.on('connection', (socket) => {
 
         console.log('✅ Game started successfully');
         broadcastLobbyList();
+
+        startMoveTimer(lobbyId, lobby.currentTurn);
     });
 
     socket.on('playCard', ({ lobbyID, playerID, cardIndex }) => {
@@ -730,6 +840,8 @@ io.on('connection', (socket) => {
             }
         }
 
+        clearMoveTimer(lobbyID);
+
         player.hand.splice(cardIndex, 1)[0];
         lobby.board = lobby.board || [];
         lobby.board.push({ ...card, playedBy: playerID });
@@ -759,6 +871,8 @@ io.on('connection', (socket) => {
             lobby.players.forEach(p => {
                 io.to(p.id).emit('yourHand', { hand: p.hand });
             });
+
+            startMoveTimer(lobbyID, otherPlayer.id); // ✅ ADD THIS LINE
         }
         else if (lobby.board.length === 2) {
             const [c1, c2] = lobby.board;
@@ -799,7 +913,10 @@ io.on('connection', (socket) => {
                     totalMatchPoints: p.totalMatchPoints || 0,
                     cardCount: p.hand.length
                 }))
+
             });
+            
+            clearMoveTimer(lobbyID);
 
             setTimeout(() => {
                 io.to(lobbyID).emit('trickWinner', {
@@ -839,10 +956,18 @@ io.on('connection', (socket) => {
                     lobby.players.forEach(p => {
                         io.to(p.id).emit('yourHand', { hand: p.hand });
                     });
+
+                    startMoveTimer(lobbyID, winnerId);
                 }, 3000);
             }, 500);
         }
     });
+
+    socket.on('resignGame', ({ lobbyId, playerId }) => {
+        handleResignation(lobbyId, playerId, 'resignation');
+    });
+
+
 
     socket.on('disconnect', () => {
         console.log('Player disconnected:', socket.id);
@@ -858,6 +983,8 @@ io.on('connection', (socket) => {
         for (const [lobbyId, lobby] of Object.entries(lobbies)) {
             const player = lobby.players.find(p => p.id === socket.id);
             if (!player) continue;
+
+            clearMoveTimer(lobbyId);
 
             player.disconnected = true;
             player.lastSeen = Date.now();
