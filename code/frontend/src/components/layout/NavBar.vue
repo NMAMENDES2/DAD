@@ -3,7 +3,7 @@
         <NavigationMenu>
             <NavigationMenuList class="justify-around gap-20">
                 <NavigationMenuItem>
-                    <NavigationMenuTrigger>Menu</NavigationMenuTrigger>
+                    <NavigationMenuTrigger v-if="userLoggedIn">Menu</NavigationMenuTrigger>
                     <NavigationMenuContent>
                         <li>
 

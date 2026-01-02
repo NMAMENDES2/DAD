@@ -128,7 +128,9 @@ const handleDeleteAccount = async () => {
   
   try {
     await profileStore.deleteAccount(deleteForm.value.password)
-    await authStore.logout()
+    await apiStore.postLogout()  // clears token and header
+    authStore.currentUser = null
+    router.push('/login')
     toast.success(profileStore.message || 'Account deleted successfully')
   } catch (error) {
     toast.error(profileStore.message || 'Failed to delete account')

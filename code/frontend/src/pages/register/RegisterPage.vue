@@ -56,8 +56,8 @@
 
 <script setup>
 import { ref } from 'vue'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input/'
+import { Button } from '@/components/ui/button/'
 
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
@@ -79,7 +79,7 @@ const handleSubmit = async () => {
     toast.promise(authStore.register(formData.value), {
         loading: 'Calling API',
         success: (data) => {
-            return `Register Sucessfull - Welcome ${data?.user?.name}`
+            return `Register successful - Welcome ${data?.user?.name}`
         },
         error: (data) =>{ 
             `[API Error] - ${data?.response?.data?.message || 'An error occurred'}`

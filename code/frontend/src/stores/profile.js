@@ -103,6 +103,9 @@ export const useProfileStore = defineStore('profile', () => {
     try {
       loading.value = true
       message.value = null
+
+      apiStore.setAuthorizationHeader(localStorage.getItem('token'))
+
       const response = await axios.delete(`${API_BASE_URL}/profile`, {
         data: { password }
       })
