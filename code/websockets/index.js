@@ -16,13 +16,13 @@ const userSocketMap = new Map(); // Use Map for better performance
 // Calculate marks based on points
 function calculateMarks(points) {
     if (points >= 120) {
-        return 4; // Bandeira
+        return 4; // Bandeira - clean sweep
     } else if (points >= 91) {
         return 2; // Capote
     } else if (points >= 61) {
         return 1; // Risca
     }
-    return 0; // Draw or loss
+    return 0; // Less than 61 = loss or draw
 }
 
 // Check if match should end (someone reached 4 marks)
@@ -193,21 +193,20 @@ function autoDrawCards(lobbyID) {
         drawn.winnerCard = deck.shift();
         winner.hand.push(drawn.winnerCard);
     }
+    
     if (deck.length > 0) {
         drawn.loserCard = deck.shift();
         loser.hand.push(drawn.loserCard);
     }
 
-    if (deck.length === 0) {
-        lobby.trump = null;
-    }
+    const trumpSuit = lobby.trump?.suit;
 
     io.to(lobbyID).emit("cardsDrawn", {
         winnerID: winner.id,
         loserID: loser.id,
         ...drawn,
         remaining: deck.length,
-        trump: lobby.trump
+        trump: deck.length === 0 ? { suit: trumpSuit } : lobby.trump // Keep suit visible
     });
 
     lobby.players.forEach(player => {
@@ -280,21 +279,19 @@ function checkGameEnd(lobby, lobbyID) {
 }
 
 function handleMatchGameEnd(lobby, lobbyID, winner) {
-    // Initialize match data if first game
     if (!lobby.matchId) {
-        lobby.matchId = null; // Will be set when backend creates match
+        lobby.matchId = null;
         lobby.players[0].marks = 0;
         lobby.players[1].marks = 0;
         lobby.players[0].totalMatchPoints = 0;
         lobby.players[1].totalMatchPoints = 0;
     }
     
-    // Calculate marks for this game
     const player1Points = lobby.players[0].points;
     const player2Points = lobby.players[1].points;
     
-    // Check for draw
-    if (player1Points === player2Points) {
+    if (player1Points === player2Points || 
+        (player1Points < 61 && player2Points < 61)) {
         console.log('🤝 Game ended in a draw - no marks awarded');
         io.to(lobbyID).emit('gameEnded', {
             winnerId: null,
@@ -307,33 +304,39 @@ function handleMatchGameEnd(lobby, lobbyID, winner) {
             }))
         });
         
-        // Save game (draw)
         if (lobby.players.every(p => p.userId)) {
             saveGameToBackend(lobby, lobbyID, true, lobby.matchId);
         }
         
-        // Reset for next game
         resetGameForNextRound(lobby);
+        
+        setTimeout(() => {
+            if (!lobby.matchEnded && lobby.players.length === 2) {
+                startNextGameInMatch(lobby, lobbyID);
+            }
+        }, 3000);
         return;
     }
     
-    // Calculate marks based on winner's points
-    const winnerPoints = winner.points;
-    const marks = calculateMarks(winnerPoints);
+    const actualWinner = player1Points >= 61 ? lobby.players[0] : 
+                         player2Points >= 61 ? lobby.players[1] : null;
     
-    // Update marks and total points
-    const winnerPlayer = lobby.players.find(p => p.id === winner.id);
-    if (winnerPlayer) {
-        winnerPlayer.marks = (winnerPlayer.marks || 0) + marks;
-        winnerPlayer.totalMatchPoints = (winnerPlayer.totalMatchPoints || 0) + winnerPoints;
+    if (!actualWinner) {
+        console.error('❌ No winner with 61+ points');
+        return;
     }
     
-    const loserPlayer = lobby.players.find(p => p.id !== winner.id);
+    const marks = calculateMarks(actualWinner.points);
+    
+    actualWinner.marks = (actualWinner.marks || 0) + marks;
+    actualWinner.totalMatchPoints = (actualWinner.totalMatchPoints || 0) + actualWinner.points;
+    
+    const loserPlayer = lobby.players.find(p => p.id !== actualWinner.id);
     if (loserPlayer) {
         loserPlayer.totalMatchPoints = (loserPlayer.totalMatchPoints || 0) + loserPlayer.points;
     }
     
-    console.log(`📊 Marks updated: ${lobby.players[0].nickname} (${lobby.players[0].marks || 0}), ${lobby.players[1].nickname} (${lobby.players[1].marks || 0})`);
+    console.log(`📊 Marks: ${lobby.players[0].nickname} (${lobby.players[0].marks}), ${lobby.players[1].nickname} (${lobby.players[1].marks})`);
     
     // Save this game
     if (lobby.players.every(p => p.userId)) {
@@ -342,15 +345,14 @@ function handleMatchGameEnd(lobby, lobbyID, winner) {
     
     // Check if match is over
     if (checkMatchEnd(lobby)) {
-        console.log(`🏆 Match over! ${winnerPlayer.nickname} reached 4 marks!`);
+        console.log(`🏆 Match over! ${actualWinner.nickname} reached 4 marks!`);
         
-        // Save match
         if (lobby.players.every(p => p.userId)) {
             saveMatchToBackend(lobby, lobbyID);
         }
         
         io.to(lobbyID).emit('matchEnded', {
-            winnerId: winner.id,
+            winnerId: actualWinner.id,
             players: lobby.players.map(p => ({
                 id: p.id,
                 nickname: p.nickname,
@@ -365,7 +367,7 @@ function handleMatchGameEnd(lobby, lobbyID, winner) {
     } else {
         // Continue to next game
         io.to(lobbyID).emit('gameEnded', {
-            winnerId: winner.id,
+            winnerId: actualWinner.id,
             isMatchGame: true,
             players: lobby.players.map(p => ({
                 id: p.id,
@@ -376,10 +378,8 @@ function handleMatchGameEnd(lobby, lobbyID, winner) {
             }))
         });
         
-        // Reset for next game
         resetGameForNextRound(lobby);
         
-        // Auto-start next game after a delay
         setTimeout(() => {
             if (!lobby.matchEnded && lobby.players.length === 2) {
                 startNextGameInMatch(lobby, lobbyID);
@@ -699,23 +699,13 @@ io.on('connection', (socket) => {
         const lobby = lobbies[lobbyID];
         
         // FIXED: Validate game state before allowing card play
-        if (!lobby) {
-            socket.emit('cardPlayError', { message: 'Lobby not found' });
-            return;
-        }
-
-        if (!lobby.gameStarted) {
-            socket.emit('cardPlayError', { message: 'Game has not started yet' });
+        if (!lobby || !lobby.gameStarted) {
+            socket.emit('cardPlayError', { message: 'Game not ready' });
             return;
         }
 
         const player = lobby.players.find(p => p.id === playerID);
-        if (!player) {
-            socket.emit('cardPlayError', { message: 'Player not found' });
-            return;
-        }
-
-        if (!player.hand[cardIndex]) {
+        if (!player || !player.hand[cardIndex]) {
             socket.emit('cardPlayError', { message: 'Invalid card' });
             return;
         }
@@ -725,7 +715,22 @@ io.on('connection', (socket) => {
             return;
         }
 
-        const card = player.hand.splice(cardIndex, 1)[0];
+        const card = player.hand[cardIndex];
+
+        // FOLLOW SUIT RULE: Must follow suit in final phase if possible
+        if (lobby.remainingDeck.length === 0 && lobby.board.length === 1) {
+            const leadCard = lobby.board[0];
+            const hasSameSuit = player.hand.some(c => c.suit === leadCard.suit);
+
+            if (hasSameSuit && card.suit !== leadCard.suit) {
+                socket.emit('cardPlayError', {
+                    message: 'You must follow suit in the final phase!'
+                });
+                return;
+            }
+        }
+
+        player.hand.splice(cardIndex, 1)[0];
         lobby.board = lobby.board || [];
         lobby.board.push({ ...card, playedBy: playerID });
 

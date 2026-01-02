@@ -42,7 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Leaderboard
     Route::get('/leaderboard', [LeaderboardController::class, 'getLeaderboard']);
     Route::get('/games/me', [GameController::class, 'myGames']);
-    // Jogos (Mãos Individuais - Opcional se quiseres gravar cada mão)
+
     Route::apiResource('games', GameController::class);
 
 

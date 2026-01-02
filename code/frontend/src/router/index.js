@@ -6,8 +6,6 @@ import Multiplayer from '@/pages/multiplayer/Multiplayer.vue'
 import Profile from '@/pages/profile/Profile.vue'
 import PurchasePage from '@/pages/purchase/PurchasePage.vue'
 import RegisterPage from '@/pages/register/RegisterPage.vue'
-import LaravelPage from '@/pages/testing/LaravelPage.vue'
-import WebsocketsPage from '@/pages/testing/WebsocketsPage.vue'
 import TransactionsPage from '@/pages/Transactions/TransactionsPage.vue'
 import { useAuthStore } from '@/stores/auth'
 import { createRouter, createWebHistory } from 'vue-router'
@@ -90,19 +88,6 @@ const router = createRouter({
       meta: { requiresAuth: false }, // é global, pode ser pública
     },
     {
-      path: '/testing',
-      children: [
-        {
-          path: 'laravel',
-          component: LaravelPage,
-        },
-        {
-          path: 'websockets',
-          component: WebsocketsPage,
-        },
-      ],
-    },
-    {
       path: '/my-matches',
       name: 'my-matches',
       component: MyMatchesPage,
@@ -130,7 +115,7 @@ router.beforeEach(async (to, from, next) => {
     return next({ name: 'login' })
   }
 
-  if (to.meta.requiresAdmin && authStore.user?.type !== 'A') {
+  if (to.meta.requiresAdmin && authStore.currentUser?.type !== 'A') {
     return next({ name: 'Home' })
   }
 

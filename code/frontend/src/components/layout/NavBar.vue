@@ -3,15 +3,10 @@
         <NavigationMenu>
             <NavigationMenuList class="justify-around gap-20">
                 <NavigationMenuItem>
-                    <NavigationMenuTrigger>Testing</NavigationMenuTrigger>
+                    <NavigationMenuTrigger>Menu</NavigationMenuTrigger>
                     <NavigationMenuContent>
                         <li>
-                            <NavigationMenuLink as-child>
-                                <RouterLink to="/testing/laravel">Laravel</RouterLink>
-                            </NavigationMenuLink>
-                            <NavigationMenuLink as-child>
-                                <RouterLink to="/testing/websockets">Web Sockets</RouterLink>
-                            </NavigationMenuLink>
+
                             <NavigationMenuLink v-if="userLoggedIn" as-child>
                                 <RouterLink to="/profile">Profile</RouterLink>
                             </NavigationMenuLink>
@@ -21,6 +16,10 @@
                             <NavigationMenuLink v-if="userLoggedIn" as-child>
                                 <RouterLink to="/purchase">Purchase Coins</RouterLink>
                             </NavigationMenuLink>
+                            <NavigationMenuLink v-if="userLoggedIn && authStore.currentUser?.type === 'A'" as-child>
+                                <RouterLink to="/admin">Admin Dashboard</RouterLink>
+                            </NavigationMenuLink>
+
                         </li>
                     </NavigationMenuContent>
                 </NavigationMenuItem>
@@ -48,6 +47,9 @@ import {
     NavigationMenuList,
     NavigationMenuTrigger,
 } from '@/components/ui/navigation-menu'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 
 
 const emits = defineEmits(['logout'])

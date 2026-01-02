@@ -344,7 +344,7 @@ const leaveGame = () => {
       <CardContent class="pt-4 text-xs">
         <div class="grid grid-cols-3 gap-2">
           <div>My ID: {{ playerID.slice(-6) }}</div>
-          <div>Current Turn: {{ currentTurn.slice(-6) }}</div>
+          <div>Current Turn: {{ currentTurn?.slice(-6) || "Resolving...."}}</div>
           <div class="font-bold" :class="isMyTurn ? 'text-green-600' : 'text-red-600'">
             {{ isMyTurn ? '✓ MY TURN' : '✗ NOT MY TURN' }}
           </div>
