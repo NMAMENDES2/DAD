@@ -22,6 +22,16 @@
             @click="showVariantChoice = true"
           >
             Single Player
+          </Button
+            class="w-full py-3 px-6 text-center bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+
+          >
+
+          <Button
+            class="w-full py-3 px-6 text-center bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
+            @click="goLeaderboard"
+          >
+            Leaderboard
           </Button>
 
           <Button
@@ -30,15 +40,6 @@
             class="w-full py-3 px-6 text-center bg-indigo-500 text-white rounded-lg hover:bg-indigo-600"
           >
             Multiplayer
-          </Button>
-
-          <!-- Leaderboard (apenas logado) -->
-          <Button
-            v-if="isLoggedIn"
-            class="w-full py-3 px-6 text-center bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
-            @click="goLeaderboard"
-          >
-            Leaderboard
           </Button>
 
           <!-- Estatísticas (apenas logado) -->

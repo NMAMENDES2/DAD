@@ -16,6 +16,8 @@ use App\Http\Controllers\AdminUserController;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::get('/games/my', [GameController::class, 'myGames']); // fora do grupo
+Route::get('/leaderboard', [LeaderboardController::class, 'getLeaderboard']);
+
 
 Route::middleware('auth:sanctum')->group(function () {
     
@@ -40,7 +42,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/transactions', [TransactionController::class, 'store']);
 
     // Leaderboard
-    Route::get('/leaderboard', [LeaderboardController::class, 'getLeaderboard']);
     Route::get('/games/me', [GameController::class, 'myGames']);
 
     Route::apiResource('games', GameController::class);
